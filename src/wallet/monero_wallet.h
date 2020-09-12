@@ -494,6 +494,15 @@ namespace monero {
       throw std::runtime_error("get_balance() not supported");
     }
 
+       /**
+     * Get the wallet's offshore balance.
+     *
+     * @return the wallet's offshore balance
+     */
+    virtual uint64_t get_offshore_balance() const {
+      throw std::runtime_error("get_offshore_balance() not supported");
+    }
+
     /**
      * Get an account's balance.
      *
@@ -501,6 +510,16 @@ namespace monero {
      * @return the account's balance
      */
     virtual uint64_t get_balance(uint32_t account_idx) const {
+      throw std::runtime_error("get_balance() not supported");
+    }
+
+      /**
+     * Get an account's offshore balance.
+     *
+     * @param account_idx is the index of the account to get the offshore balance of
+     * @return the account's offshore balance
+     */
+    virtual uint64_t get_offshore_balance(uint32_t account_idx) const {
       throw std::runtime_error("get_balance() not supported");
     }
 
@@ -516,11 +535,31 @@ namespace monero {
     }
 
     /**
+     * Get a subaddress's offshore balance.
+     *
+     * @param account_idx is the index of the subaddress's account to get the balance of
+     * @param subaddress_idx is the index of the subaddress to get the balance of
+     * @return the subaddress's balance
+     */
+    virtual uint64_t get_offshore_balance(uint32_t account_idx, uint32_t subaddress_idx) const {
+      throw std::runtime_error("get_offshore_balance() not supported");
+    }
+
+    /**
      * Get the wallet's unlocked balance.
      *
      * @return the wallet's unlocked balance
      */
     virtual uint64_t get_unlocked_balance() const {
+      throw std::runtime_error("get_unlocked_balance() not supported");
+    }
+
+    /**
+     * Get the wallet's unlocked offshore balance.
+     *
+     * @return the wallet's unlocked offshore balance
+     */
+    virtual uint64_t get_unlocked_offshore_balance() const {
       throw std::runtime_error("get_unlocked_balance() not supported");
     }
 
@@ -535,6 +574,16 @@ namespace monero {
     }
 
     /**
+     * Get an account's unlocked offshore balance.
+     *
+     * @param account_idx is the index of the account to get the unlocked offshore balance of
+     * @return the account's unlocked offshore balance
+     */
+    virtual uint64_t get_unlocked_offshore_balance(uint32_t account_idx) const {
+      throw std::runtime_error("get_unlocked_offshore_balance() not supported");
+    }  
+
+    /**
      * Get a subaddress's unlocked balance.
      *
      * @param account_idx is the index of the subaddress's account to get the unlocked balance of
@@ -543,6 +592,17 @@ namespace monero {
      */
     virtual uint64_t get_unlocked_balance(uint32_t account_idx, uint32_t subaddress_idx) const {
       throw std::runtime_error("get_unlocked_balance() not supported");
+    }
+
+    /**
+     * Get a subaddress's unlocked offshore balance.
+     *
+     * @param account_idx is the index of the subaddress's account to get the unlocked offshore balance of
+     * @param subaddress_idx is the index of the subaddress to get the unlocked offshore balance of
+     * @return the subaddress's offshore balance
+     */
+    virtual uint64_t get_unlocked_offshore_balance(uint32_t account_idx, uint32_t subaddress_idx) const {
+      throw std::runtime_error("get_unlocked_offshore_balance() not supported");
     }
 
     /**

@@ -764,7 +764,7 @@ namespace monero {
       tx.reset();
     }
 
-    void on_money_received(uint64_t height, const crypto::hash &txid, const cryptonote::transaction& cn_tx, uint64_t amount, const cryptonote::subaddress_index& subaddr_index, bool is_change, uint64_t unlock_time) override {
+    void on_money_received(uint64_t height, const crypto::hash &txid, const cryptonote::transaction& cn_tx, uint64_t amount, const cryptonote::subaddress_index& subaddr_index, bool is_change, uint64_t unlock_time, bool offshore) override {
       if (m_wallet.get_listeners().empty()) return;
 
       // create native library tx
@@ -796,7 +796,7 @@ namespace monero {
       tx.reset();
     }
 
-    void on_money_spent(uint64_t height, const crypto::hash &txid, const cryptonote::transaction& cn_tx_in, uint64_t amount, const cryptonote::transaction& cn_tx_out, const cryptonote::subaddress_index& subaddr_index) override {
+    void on_money_spent(uint64_t height, const crypto::hash &txid, const cryptonote::transaction& cn_tx_in, uint64_t amount, const cryptonote::transaction& cn_tx_out, const cryptonote::subaddress_index& subaddr_index, bool offshore) override {
       if (m_wallet.get_listeners().empty()) return;
       if (&cn_tx_in != &cn_tx_out) throw std::runtime_error("on_money_spent() in tx is different than out tx");
 
@@ -1317,6 +1317,34 @@ namespace monero {
 
   uint64_t monero_wallet_core::get_unlocked_balance(uint32_t account_idx, uint32_t subaddress_idx) const {
     std::map<uint32_t, std::pair<uint64_t, std::pair<uint64_t, uint64_t>>> unlocked_balance_per_subaddress = m_w2->unlocked_balance_per_subaddress(account_idx, STRICT);
+    auto iter = unlocked_balance_per_subaddress.find(subaddress_idx);
+    return iter == unlocked_balance_per_subaddress.end() ? 0 : iter->second.first;
+  }
+
+   uint64_t monero_wallet_core::get_offshore_balance() const {
+    return m_w2->offshore_balance_all(STRICT);
+  }
+
+  uint64_t monero_wallet_core::get_offshore_balance(uint32_t account_idx) const {
+    return m_w2->offshore_balance(account_idx, STRICT);
+  }
+
+  uint64_t monero_wallet_core::get_offshore_balance(uint32_t account_idx, uint32_t subaddress_idx) const {
+    std::map<uint32_t, uint64_t> balance_per_subaddress = m_w2->offshore_balance_per_subaddress(account_idx, STRICT);
+    auto iter = balance_per_subaddress.find(subaddress_idx);
+    return iter == balance_per_subaddress.end() ? 0 : iter->second;
+  }
+
+  uint64_t monero_wallet_core::get_unlocked_offshore_balance() const {
+    return m_w2->unlocked_offshore_balance_all(STRICT);
+  }
+
+  uint64_t monero_wallet_core::get_unlocked_offshore_balance(uint32_t account_idx) const {
+    return m_w2->unlocked_offshore_balance(account_idx, STRICT);
+  }
+
+  uint64_t monero_wallet_core::get_unlocked_offshore_balance(uint32_t account_idx, uint32_t subaddress_idx) const {
+    std::map<uint32_t, std::pair<uint64_t, std::pair<uint64_t, uint64_t>>> unlocked_balance_per_subaddress = m_w2->unlocked_offshore_balance_per_subaddress(account_idx, STRICT);
     auto iter = unlocked_balance_per_subaddress.find(subaddress_idx);
     return iter == unlocked_balance_per_subaddress.end() ? 0 : iter->second.first;
   }
@@ -2469,9 +2497,10 @@ namespace monero {
 
     // initialize and return tx check using wallet2
     uint64_t received_amount;
+    uint64_t received_amount_usd;
     bool in_tx_pool;
     uint64_t num_confirmations;
-    m_w2->check_tx_key(_tx_hash, _tx_key, additional_tx_keys, info.address, received_amount, in_tx_pool, num_confirmations);
+    m_w2->check_tx_key(_tx_hash, _tx_key, additional_tx_keys, info.address, received_amount,received_amount_usd, in_tx_pool, num_confirmations);
     std::shared_ptr<monero_check_tx> check_tx = std::make_shared<monero_check_tx>();
     check_tx->m_is_good = true; // check is good if we get this far
     check_tx->m_received_amount = received_amount;
@@ -2516,9 +2545,10 @@ namespace monero {
     // initialize and return tx check using wallet2
     std::shared_ptr<monero_check_tx> check_tx = std::make_shared<monero_check_tx>();
     uint64_t received_amount;
+    uint64_t received_amount_usd;
     bool in_tx_pool;
     uint64_t num_confirmations;
-    check_tx->m_is_good = m_w2->check_tx_proof(_tx_hash, info.address, info.is_subaddress, message, signature, received_amount, in_tx_pool, num_confirmations);
+    check_tx->m_is_good = m_w2->check_tx_proof(_tx_hash, info.address, info.is_subaddress, message, signature, received_amount, received_amount_usd, in_tx_pool, num_confirmations);
     if (check_tx->m_is_good) {
       check_tx->m_received_amount = received_amount;
       check_tx->m_in_tx_pool = in_tx_pool;

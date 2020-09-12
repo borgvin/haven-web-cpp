@@ -213,6 +213,12 @@ namespace monero {
     uint64_t get_unlocked_balance() const override;
     uint64_t get_unlocked_balance(uint32_t account_idx) const override;
     uint64_t get_unlocked_balance(uint32_t account_idx, uint32_t subaddress_idx) const override;
+    uint64_t get_offshore_balance() const override;
+    uint64_t get_offshore_balance(uint32_t account_idx) const override;
+    uint64_t get_offshore_balance(uint32_t account_idx, uint32_t subaddress_idx) const override;
+    uint64_t get_unlocked_offshore_balance() const override;
+    uint64_t get_unlocked_offshore_balance(uint32_t account_idx) const override;
+    uint64_t get_unlocked_offshore_balance(uint32_t account_idx, uint32_t subaddress_idx) const override;
     std::vector<monero_account> get_accounts(bool include_subaddresses, const std::string& tag) const override;
     monero_account get_account(const uint32_t account_idx, bool include_subaddresses) const override;
     monero_account create_account(const std::string& label = "") override;
