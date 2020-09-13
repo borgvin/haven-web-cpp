@@ -603,16 +603,16 @@ namespace monero {
     return true;
   }
   //------------------------------------------------------------------------------------------------------------------------------
-  static uint64_t total_amount(const tools::wallet2::pending_tx &ptx)
+   static uint64_t total_amount(const tools::wallet2::pending_tx &ptx, bool use_offshore_amounts)
   {
     uint64_t amount = 0;
-    for (const auto &dest: ptx.dests) amount += dest.amount;
+    for (const auto &dest: ptx.dests) amount += (use_offshore_amounts ? dest.amount_usd : dest.amount);
     return amount;
   }
   //------------------------------------------------------------------------------------------------------------------------------
   template<typename Ts, typename Tu>
   bool fill_response(wallet2* m_w2, std::vector<tools::wallet2::pending_tx> &ptx_vector,
-      bool get_tx_key, Ts& tx_key, Tu &amount, Tu &fee, Tu &weight, std::string &multisig_txset, std::string &unsigned_txset, bool do_not_relay,
+      bool get_tx_key, Ts& tx_key, Tu &amount, Tu &amount_usd, Tu &fee, Tu &weight, std::string &multisig_txset, std::string &unsigned_txset, bool do_not_relay,
       Ts &tx_hash, bool get_tx_hex, Ts &tx_blob, bool get_tx_metadata, Ts &tx_metadata, epee::json_rpc::error &er)
   {
     for (const auto & ptx : ptx_vector)
@@ -625,7 +625,8 @@ namespace monero {
         fill(tx_key, std::string(s.data(), s.size()));
       }
       // Compute amount leaving wallet in tx. By convention dests does not include change outputs
-      fill(amount, total_amount(ptx));
+      fill(amount, total_amount(ptx, false));
+      fill(amount_usd, total_amount(ptx, true));
       fill(fee, ptx.fee);
       fill(weight, cryptonote::get_transaction_weight(ptx.tx));
     }
@@ -735,6 +736,13 @@ namespace monero {
       if (m_wallet.get_listeners().empty()) return;
       for (monero_wallet_listener* listener : m_wallet.get_listeners()) {
         listener->on_balances_changed(new_balance, new_unlocked_balance);
+      }
+    }
+
+    void on_offshore_balances_changed(uint64_t new_offshore_balance, uint64_t new_unlocked_offshore_balance) {
+      if (m_wallet.get_listeners().empty()) return;
+      for (monero_wallet_listener* listener : m_wallet.get_listeners()) {
+        listener->on_offshore_balances_changed(new_offshore_balance, new_unlocked_offshore_balance);
       }
     }
 
@@ -1646,6 +1654,11 @@ namespace monero {
     // validate config
     if (config.m_account_index == boost::none) throw std::runtime_error("Must specify account index to send from");
 
+    // validate tx_type
+    if (config.m_tx_type == boost::noone) throw std::runtime_error("Must specify tx type");
+
+    uint32_t tx_type = config.m_tx_type.get();
+
     // prepare parameters for wallet rpc's validate_transfer()
     std::string payment_id = config.m_payment_id == boost::none ? std::string("") : config.m_payment_id.get();
     std::list<tools::wallet_rpc::transfer_destination> tr_destinations;
@@ -1660,18 +1673,59 @@ namespace monero {
     std::vector<cryptonote::tx_destination_entry> dsts;
     std::vector<uint8_t> extra;
     epee::json_rpc::error err;
+
+    uint32_t priority = m_w2->adjust_priority(config.m_priority == boost::none ? 0 : config.m_priority.get());
+    uint64_t unlock_time = 0;
+
+      // check tx type and set extra data and unlock time accordingly
+    if (tx_type == OFFSHORE_TX || tx_type == ONSHORE_TX) {
+
+      // set unlock time 
+      if (m_w2->use_fork_rules(HF_VERSION_OFFSHORE_FEES_V2, 0)) {
+	        unlock_time = ((priority == 4) ? 180 : (priority == 3) ? 720 : (priority == 2) ? 1440 : 5040) + m_w2->get_blockchain_current_height();
+      } else {
+	        unlock_time = 60 * pow(3, std::max((uint32_t)0, 4-priority)) + m_w2->get_blockchain_current_height();
+      }
+
+      if (tx_type == OFFSHORE_TX) {
+        // Populate the txextra to signify that this is an offshore tx
+        cryptonote::tx_extra_offshore offshore_data;
+        offshore_data.data = std::string("NN");
+        cryptonote::add_offshore_to_tx_extra(extra, offshore_data);
+      
+      } 
+      // else we have an onshore tx
+      else {
+
+        // Populate the txextra to signify that this is an offshore tx
+        cryptonote::tx_extra_offshore offshore_data;
+        offshore_data.data = std::string("NA");
+        cryptonote::add_offshore_to_tx_extra(extra, offshore_data);
+      }
+    }
+
+    if (tx_type == OFFSHORE_TO_OFFSHORE_TX) {
+
+          // Populate the txextra to signify that this is an offshore tx
+    cryptonote::tx_extra_offshore offshore_data;
+    offshore_data.data = std::string("NN");
+    cryptonote::add_offshore_to_tx_extra(extra, offshore_data);
+
+    }
+
+
     if (!validate_transfer(m_w2.get(), tr_destinations, payment_id, dsts, extra, true, err)) {
       throw std::runtime_error(err.message);
     }
 
     // prepare parameters for wallet2's create_transactions_2()
     uint64_t mixin = m_w2->adjust_mixin(0); // get mixin for call to 'create_transactions_2'
-    uint32_t priority = m_w2->adjust_priority(config.m_priority == boost::none ? 0 : config.m_priority.get());
-    uint64_t unlock_time = config.m_unlock_time == boost::none ? 0 : config.m_unlock_time.get();
     uint32_t account_index = config.m_account_index.get();
     std::set<uint32_t> subaddress_indices;
     for (const uint32_t& subaddress_idx : config.m_subaddress_indices) subaddress_indices.insert(subaddress_idx);
 
+
+  
     // prepare transactions
     std::vector<wallet2::pending_tx> ptx_vector = m_w2->create_transactions_2(dsts, mixin, unlock_time, priority, extra, account_index, subaddress_indices);
     if (ptx_vector.empty()) throw std::runtime_error("No transaction created");
@@ -1690,6 +1744,7 @@ namespace monero {
     // commit txs (if relaying) and get response using wallet rpc's fill_response()
     std::list<std::string> tx_keys;
     std::list<uint64_t> tx_amounts;
+    std::list<uint64_t> tx_amounts_usd;
     std::list<uint64_t> tx_fees;
     std::list<uint64_t> tx_weights;
     std::string multisig_tx_hex;
@@ -1697,7 +1752,7 @@ namespace monero {
     std::list<std::string> tx_hashes;
     std::list<std::string> tx_blobs;
     std::list<std::string> tx_metadatas;
-    if (!fill_response(m_w2.get(), ptx_vector, get_tx_keys, tx_keys, tx_amounts, tx_fees, tx_weights, multisig_tx_hex, unsigned_tx_hex, !relay, tx_hashes, get_tx_hex, tx_blobs, get_tx_metadata, tx_metadatas, err)) {
+    if (!fill_response(m_w2.get(), ptx_vector, get_tx_keys, tx_keys, tx_amounts, tx_amounts_usd, tx_fees, tx_weights, multisig_tx_hex, unsigned_tx_hex, !relay, tx_hashes, get_tx_hex, tx_blobs, get_tx_metadata, tx_metadatas, err)) {
       throw std::runtime_error("need to handle error filling response!");  // TODO
     }
 
@@ -1875,6 +1930,7 @@ namespace monero {
     // commit txs (if relaying) and get response using wallet rpc's fill_response()
     std::list<std::string> tx_keys;
     std::list<uint64_t> tx_amounts;
+     std::list<uint64_t> tx_amounts_usd;
     std::list<uint64_t> tx_fees;
     std::list<uint64_t> tx_weights;
     std::string multisig_tx_hex;
@@ -1882,7 +1938,7 @@ namespace monero {
     std::list<std::string> tx_hashes;
     std::list<std::string> tx_blobs;
     std::list<std::string> tx_metadatas;
-    if (!fill_response(m_w2.get(), ptx_vector, get_tx_keys, tx_keys, tx_amounts, tx_fees, tx_weights, multisig_tx_hex, unsigned_tx_hex, !relay, tx_hashes, get_tx_hex, tx_blobs, get_tx_metadata, tx_metadatas, err)) {
+    if (!fill_response(m_w2.get(), ptx_vector, get_tx_keys, tx_keys, tx_amounts, tx_amounts_usd, tx_fees, tx_weights, multisig_tx_hex, unsigned_tx_hex, !relay, tx_hashes, get_tx_hex, tx_blobs, get_tx_metadata, tx_metadatas, err)) {
       throw std::runtime_error("need to handle error filling response!");  // TODO
     }
 
@@ -1998,6 +2054,7 @@ namespace monero {
     // commit txs (if relaying) and get response using wallet rpc's fill_response()
     std::list<std::string> tx_keys;
     std::list<uint64_t> tx_amounts;
+    std::list<uint64_t> tx_amounts_usd;
     std::list<uint64_t> tx_fees;
     std::list<uint64_t> tx_weights;
     std::string multisig_tx_hex;
@@ -2005,7 +2062,7 @@ namespace monero {
     std::list<std::string> tx_hashes;
     std::list<std::string> tx_blobs;
     std::list<std::string> tx_metadatas;
-    if (!fill_response(m_w2.get(), ptx_vector, get_tx_keys, tx_keys, tx_amounts, tx_fees, tx_weights, multisig_tx_hex, unsigned_tx_hex, !relay, tx_hashes, get_tx_hex, tx_blobs, get_tx_metadata, tx_metadatas, err)) {
+    if (!fill_response(m_w2.get(), ptx_vector, get_tx_keys, tx_keys, tx_amounts, tx_amounts_usd, tx_fees, tx_weights, multisig_tx_hex, unsigned_tx_hex, !relay, tx_hashes, get_tx_hex, tx_blobs, get_tx_metadata, tx_metadatas, err)) {
       throw std::runtime_error("need to handle error filling response!");  // TODO: return err message
     }
 
@@ -2088,6 +2145,7 @@ namespace monero {
     // commit txs (if relaying) and get response using wallet rpc's fill_response()
     std::list<std::string> tx_keys;
     std::list<uint64_t> tx_amounts;
+    std::list<uint64_t> tx_amounts_usd;
     std::list<uint64_t> tx_fees;
     std::list<uint64_t> tx_weights;
     std::string multisig_tx_hex;
@@ -2096,7 +2154,7 @@ namespace monero {
     std::list<std::string> tx_blobs;
     std::list<std::string> tx_metadatas;
     epee::json_rpc::error er;
-    if (!fill_response(m_w2.get(), ptx_vector, get_tx_keys, tx_keys, tx_amounts, tx_fees, tx_weights, multisig_tx_hex, unsigned_tx_hex, !relay, tx_hashes, get_tx_hex, tx_blobs, get_tx_metadata, tx_metadatas, er)) {
+    if (!fill_response(m_w2.get(), ptx_vector, get_tx_keys, tx_keys, tx_amounts, tx_amounts_usd, tx_fees, tx_weights, multisig_tx_hex, unsigned_tx_hex, !relay, tx_hashes, get_tx_hex, tx_blobs, get_tx_metadata, tx_metadatas, er)) {
       throw std::runtime_error("need to handle error filling response!");  // TODO: return err message
     }
 
@@ -3084,6 +3142,8 @@ namespace monero {
     if (get_daemon_connection() == boost::none) m_is_connected = false;
     m_prev_balance = get_balance();
     m_prev_unlocked_balance = get_unlocked_balance();
+    m_prev_offshore_balance = get_offshore_balance();
+    m_prev_unlocked_offshore_balance = get_unlocked_offshore_balance();
     m_is_synced = false;
     m_rescan_on_sync = false;
     m_syncing_enabled = false;
@@ -3106,6 +3166,11 @@ namespace monero {
       m_prev_balance = get_balance();
       m_prev_unlocked_balance = get_unlocked_balance();
       m_w2_listener->on_balances_changed(m_prev_balance, m_prev_unlocked_balance);
+    }
+    if (m_prev_balance != get_offshore_balance() || m_prev_unlocked_balance != get_unlocked_offshore_balance()) {
+      m_prev_balance = get_offshore_balance();
+      m_prev_unlocked_balance = get_unlocked_offshore_balance();
+      m_w2_listener->on_offshore_balances_changed(m_prev_balance, m_prev_unlocked_balance);
     }
   }
 
