@@ -61,6 +61,7 @@ using namespace monero;
  */
 namespace monero {
 
+
   /**
    * Models a result of syncing a wallet.
    */
@@ -255,7 +256,6 @@ namespace monero {
     boost::optional<uint64_t> m_change_amount;
     boost::optional<uint32_t> m_num_dummy_outputs;
     boost::optional<std::string> m_extra_hex;
-
     rapidjson::Value to_rapidjson_val(rapidjson::Document::AllocatorType& allocator) const;
     static void from_property_tree(const boost::property_tree::ptree& node, const std::shared_ptr<monero_tx_wallet>& tx_wallet);
     std::shared_ptr<monero_tx_wallet> copy(const std::shared_ptr<monero_tx>& src, const std::shared_ptr<monero_tx>& tgt) const;
@@ -338,6 +338,16 @@ namespace monero {
   };
 
   /**
+   * Enumerates Haven Tx Types.
+   */
+  enum haven_tx_type : uint8_t {
+    CLASSIC_TX=0,
+    ONSHORE_TX,
+    OFFSHORE_TX,
+    OFFSHORE_TO_OFFSHORE_TX
+  };
+
+  /**
    * Configures a transaction to send, sweep, or create a payment URI.
    */
   struct monero_tx_config : public serializable_struct {
@@ -358,7 +368,7 @@ namespace monero {
     boost::optional<uint64_t> m_below_amount;
     boost::optional<bool> m_sweep_each_subaddress;
     boost::optional<std::string> m_key_image;
-
+    boost::optional<haven_tx_type> m_tx_type;
     monero_tx_config() {}
     monero_tx_config(const monero_tx_config& config);
     monero_tx_config copy() const;
