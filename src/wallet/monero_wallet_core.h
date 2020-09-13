@@ -296,6 +296,8 @@ namespace monero {
 
     uint64_t m_prev_balance;
     uint64_t m_prev_unlocked_balance;
+    uint64_t m_prev_offshore_balance;
+    uint64_t m_prev_unlocked_offshore_balance;
     void check_for_changed_balances();
 
     void init_common();

@@ -97,6 +97,14 @@ namespace monero {
      */
     virtual void on_balances_changed(uint64_t new_balance, uint64_t new_unlocked_balance) {};
 
+     /**
+     * Invoked when the wallet's offshore balances change.
+     *
+     * @param new_offshore_balance - new offshore balance
+     * @param new_unlocked_offshore_balance - new unlocked offshore balance
+     */
+    virtual void on_offshore_balances_changed(uint64_t new_balance, uint64_t new_unlocked_balance) {};
+
     /**
      * Invoked when the wallet receives an output.
      *
