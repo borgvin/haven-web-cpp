@@ -205,6 +205,7 @@ namespace monero {
     boost::optional<uint64_t> m_max_used_block_height;
     boost::optional<std::string> m_max_used_block_hash;
     std::vector<std::string> m_signatures;
+    boost::optional<std::string> m_currency;
 
     rapidjson::Value to_rapidjson_val(rapidjson::Document::AllocatorType& allocator) const;
     static void from_property_tree(const boost::property_tree::ptree& node, std::shared_ptr<monero_tx> tx);

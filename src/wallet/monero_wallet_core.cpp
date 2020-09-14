@@ -144,6 +144,7 @@ namespace monero {
     tx->m_in_tx_pool = false;
     tx->m_relay = true;
     tx->m_is_double_spend_seen = false;
+    tx->m_currency = ( pd.m_offshore || pd.m_offshore_to_offshore) ? "xUSD" : "XHV";
 
     // compute m_num_confirmations TODO monero core: this logic is based on wallet_rpc_server.cpp:87 but it should be encapsulated in wallet2
     // TODO: factor out this duplicate code with build_tx_with_outgoing_transfer()
@@ -197,6 +198,7 @@ namespace monero {
     tx->m_in_tx_pool = false;
     tx->m_relay = true;
     tx->m_is_double_spend_seen = false;
+    tx->m_currency = ((pd.m_offshore_to_offshore || pd.m_onshore) ? "xUSD" : "XHV");
 
     // compute m_num_confirmations TODO monero core: this logic is based on wallet_rpc_server.cpp:87 but it should be encapsulated in wallet2
     if (*block->m_height >= height || (*block->m_height == 0 && !*tx->m_in_tx_pool)) tx->m_num_confirmations = 0;
@@ -261,6 +263,7 @@ namespace monero {
     tx->m_relay = true;
     tx->m_is_double_spend_seen = ppd.m_double_spend_seen;
     tx->m_num_confirmations = 0;
+    tx->m_currency = ( pd.m_offshore || pd.m_offshore_to_offshore)? "xUSD" : "XHV";
 
     // construct transfer
     std::shared_ptr<monero_incoming_transfer> incoming_transfer = std::make_shared<monero_incoming_transfer>();
@@ -302,6 +305,7 @@ namespace monero {
     tx->m_relay = true;
     if (!tx->m_is_failed.get() && tx->m_is_relayed.get()) tx->m_is_double_spend_seen = false;  // TODO: test and handle if true
     tx->m_num_confirmations = 0;
+    tx->m_currency = (pd.m_offshore_to_offshore || pd.m_onshore)? "xUSD" : "XHV";
 
     // construct transfer
     std::shared_ptr<monero_outgoing_transfer> outgoing_transfer = std::make_shared<monero_outgoing_transfer>();
@@ -1655,7 +1659,7 @@ namespace monero {
     if (config.m_account_index == boost::none) throw std::runtime_error("Must specify account index to send from");
 
     // validate tx_type
-    if (config.m_tx_type == boost::noone) throw std::runtime_error("Must specify tx type");
+    if (config.m_tx_type == boost::none) throw std::runtime_error("Must specify tx type");
 
     uint32_t tx_type = config.m_tx_type.get();
 
@@ -1707,9 +1711,9 @@ namespace monero {
     if (tx_type == OFFSHORE_TO_OFFSHORE_TX) {
 
           // Populate the txextra to signify that this is an offshore tx
-    cryptonote::tx_extra_offshore offshore_data;
-    offshore_data.data = std::string("NN");
-    cryptonote::add_offshore_to_tx_extra(extra, offshore_data);
+        cryptonote::tx_extra_offshore offshore_data;
+        offshore_data.data = std::string("NN");
+        cryptonote::add_offshore_to_tx_extra(extra, offshore_data);
 
     }
 
@@ -1784,6 +1788,7 @@ namespace monero {
       tx->m_is_outgoing = true;
       tx->m_payment_id = config.m_payment_id;
       tx->m_is_confirmed = false;
+      tx->m_currency = (config.m_tx_type == OFFSHORE_TX || config.m_tx_type == CLASSIC_TX) ? "XHV" : "xUSD"; 
       tx->m_is_miner_tx = false;
       tx->m_is_failed = false;   // TODO: test and handle if true
       tx->m_relay = config.m_relay != boost::none && config.m_relay.get();
