@@ -3172,10 +3172,10 @@ namespace monero {
       m_prev_unlocked_balance = get_unlocked_balance();
       m_w2_listener->on_balances_changed(m_prev_balance, m_prev_unlocked_balance);
     }
-    if (m_prev_balance != get_offshore_balance() || m_prev_unlocked_balance != get_unlocked_offshore_balance()) {
-      m_prev_balance = get_offshore_balance();
-      m_prev_unlocked_balance = get_unlocked_offshore_balance();
-      m_w2_listener->on_offshore_balances_changed(m_prev_balance, m_prev_unlocked_balance);
+    if (m_prev_offshore_balance != get_offshore_balance() || m_prev_unlocked_offshore_balance != get_unlocked_offshore_balance()) {
+      m_prev_offshore_balance = get_offshore_balance();
+      m_prev_unlocked_offshore_balance = get_unlocked_offshore_balance();
+      m_w2_listener->on_offshore_balances_changed(m_prev_offshore_balance, m_prev_unlocked_offshore_balance);
     }
   }
 
