@@ -1191,6 +1191,14 @@ namespace monero {
         else if (priority_num == 3) config->m_priority = monero_tx_priority::ELEVATED;
         else throw std::runtime_error("Invalid priority number: " + std::to_string(priority_num));
       }
+          else if (key == std::string("txType")) {
+        uint32_t tx_type_num = it->second.get_value<uint32_t>();
+        if (tx_type_num == 0) config->m_tx_type = haven_tx_type::CLASSIC;
+        else if (tx_type_num == 1) config->m_tx_type = haven_tx_type::ONSHORE_TX;
+        else if (tx_type_num == 2) config->m_tx_type = haven_tx_type::OFFSHORE_TX;
+        else if (tx_type_num == 3) config->m_tx_type = haven_tx_type::OFFSHORE_TO_OFFSHORE_TX;
+        else throw std::runtime_error("Invalid tx_type number: " + std::to_string(tx_type_num));
+      }
       else if (key == std::string("ringSize")) config->m_ring_size = it->second.get_value<uint32_t>();
       else if (key == std::string("fee")) config->m_fee = it->second.get_value<uint64_t>();
       else if (key == std::string("accountIndex")) config->m_account_index = it->second.get_value<uint32_t>();
