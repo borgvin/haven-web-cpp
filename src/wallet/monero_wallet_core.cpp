@@ -1694,7 +1694,7 @@ namespace monero {
       if (tx_type == OFFSHORE_TX) {
         // Populate the txextra to signify that this is an offshore tx
         cryptonote::tx_extra_offshore offshore_data;
-        offshore_data.data = std::string("NN");
+        offshore_data.data = std::string("AN");
         cryptonote::add_offshore_to_tx_extra(extra, offshore_data);
       
       } 
