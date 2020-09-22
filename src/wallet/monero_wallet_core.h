@@ -196,6 +196,7 @@ namespace monero {
     void set_sync_height(uint64_t sync_height) override;
     uint64_t get_daemon_height() const override;
     uint64_t get_daemon_max_peer_height() const override;
+    uint64_t get_height_by_date(uint16_t year, uint8_t month, uint8_t day) const override;
     void add_listener(monero_wallet_listener& listener) override;
     void remove_listener(monero_wallet_listener& listener) override;
     std::set<monero_wallet_listener*> get_listeners() override;
@@ -268,7 +269,7 @@ namespace monero {
     void stop_mining() override;
     uint64_t wait_for_next_block() override;
     bool is_multisig_import_needed() const override;
-    monero_multisig_info get_multisig_info() override;
+    monero_multisig_info get_multisig_info() const override;
     std::string prepare_multisig() override;
     monero_multisig_init_result make_multisig(const std::vector<std::string>& multisig_hexes, int threshold, const std::string& password) override;
     monero_multisig_init_result exchange_multisig_keys(const std::vector<std::string>& mutisig_hexes, const std::string& password) override;
@@ -293,12 +294,6 @@ namespace monero {
     std::unique_ptr<tools::wallet2> m_w2;            // internal wallet implementation
     std::unique_ptr<wallet2_listener> m_w2_listener; // internal wallet implementation listener
     std::set<monero_wallet_listener*> m_listeners;   // external wallet listeners
-
-    uint64_t m_prev_balance;
-    uint64_t m_prev_unlocked_balance;
-    uint64_t m_prev_offshore_balance;
-    uint64_t m_prev_unlocked_offshore_balance;
-    void check_for_changed_balances();
 
     void init_common();
     std::vector<monero_subaddress> get_subaddresses_aux(uint32_t account_idx, const std::vector<uint32_t>& subaddress_indices, const std::vector<tools::wallet2::transfer_details>& transfers) const;

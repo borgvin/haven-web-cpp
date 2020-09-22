@@ -249,7 +249,7 @@ namespace monero {
     if (m_fee != boost::none) monero_utils::addJsonMember("fee", m_fee.get(), allocator, root, value_num);
     if (m_ring_size != boost::none) monero_utils::addJsonMember("ringSize", m_ring_size.get(), allocator, root, value_num);
     if (m_num_confirmations != boost::none) monero_utils::addJsonMember("numConfirmations", m_num_confirmations.get(), allocator, root, value_num);
-    if (m_unlock_time != boost::none) monero_utils::addJsonMember("unlockTime", m_unlock_time.get(), allocator, root, value_num);
+    if (m_unlock_height != boost::none) monero_utils::addJsonMember("unlockHeight", m_unlock_height.get(), allocator, root, value_num);
     if (m_last_relayed_timestamp != boost::none) monero_utils::addJsonMember("lastRelayedTimestamp", m_last_relayed_timestamp.get(), allocator, root, value_num);
     if (m_received_timestamp != boost::none) monero_utils::addJsonMember("receivedTimestamp", m_received_timestamp.get(), allocator, root, value_num);
     if (m_size != boost::none) monero_utils::addJsonMember("size", m_size.get(), allocator, root, value_num);
@@ -311,7 +311,7 @@ namespace monero {
       else if (key == std::string("isConfirmed")) tx->m_is_confirmed = it->second.get_value<bool>();
       else if (key == std::string("inTxPool")) tx->m_in_tx_pool = it->second.get_value<bool>();
       else if (key == std::string("numConfirmations")) tx->m_num_confirmations = it->second.get_value<uint64_t>();
-      else if (key == std::string("unlockTime")) tx->m_unlock_time = it->second.get_value<uint64_t>();
+      else if (key == std::string("unlockHeight")) tx->m_unlock_height = it->second.get_value<uint64_t>();
       else if (key == std::string("lastRelayedTimestamp")) tx->m_last_relayed_timestamp = it->second.get_value<uint64_t>();
       else if (key == std::string("receivedTimestamp")) tx->m_received_timestamp = it->second.get_value<uint64_t>();
       else if (key == std::string("isDoubleSpendSeen")) tx->m_is_double_spend_seen = it->second.get_value<bool>();
@@ -354,7 +354,7 @@ namespace monero {
     tgt->m_is_confirmed = src->m_is_confirmed;
     tgt->m_in_tx_pool = src->m_in_tx_pool;
     tgt->m_num_confirmations = src->m_num_confirmations;
-    tgt->m_unlock_time = src->m_unlock_time;
+    tgt->m_unlock_height = src->m_unlock_height;
     tgt->m_last_relayed_timestamp = src->m_last_relayed_timestamp;
     tgt->m_received_timestamp = src->m_received_timestamp;
     tgt->m_is_double_spend_seen = src->m_is_double_spend_seen;
@@ -430,6 +430,7 @@ namespace monero {
     m_fee = gen_utils::reconcile(m_fee, other->m_fee, "tx fee");
     m_ring_size = gen_utils::reconcile(m_ring_size, other->m_ring_size, "tx m_ring_size");
     m_is_confirmed = gen_utils::reconcile(m_is_confirmed, other->m_is_confirmed);
+    m_is_miner_tx = gen_utils::reconcile(m_is_miner_tx, other->m_is_miner_tx);
     m_relay = gen_utils::reconcile(m_relay, other->m_relay);
     m_is_relayed = gen_utils::reconcile(m_is_relayed, other->m_is_relayed);
     m_is_double_spend_seen = gen_utils::reconcile(m_is_double_spend_seen, other->m_is_double_spend_seen);
@@ -453,7 +454,7 @@ namespace monero {
     m_max_used_block_height = gen_utils::reconcile(m_max_used_block_height, other->m_max_used_block_height, "max_used_block_height");
     m_max_used_block_hash = gen_utils::reconcile(m_max_used_block_hash, other->m_max_used_block_hash);
     //m_signatures = gen_utils::reconcile(m_signatures, other->m_signatures); // TODO
-    m_unlock_time = gen_utils::reconcile(m_unlock_time, other->m_unlock_time, "m_unlock_time");
+    m_unlock_height = gen_utils::reconcile(m_unlock_height, other->m_unlock_height, "m_unlock_height");
     m_num_confirmations = gen_utils::reconcile(m_num_confirmations, other->m_num_confirmations, "m_num_confirmations");
 
     // merge inputs
@@ -478,69 +479,19 @@ namespace monero {
       if (m_outputs.empty()) m_outputs = other->m_outputs;
       else {
 
-        // validate output indices if present
-        int num_indices = 0;
-        for (const std::shared_ptr<monero_output>& output : this->m_outputs) if (output->m_index != boost::none) num_indices++;
-        for (const std::shared_ptr<monero_output>& output : other->m_outputs) if (output->m_index != boost::none) num_indices++;
-        if (num_indices != 0 && this->m_outputs.size() + other->m_outputs.size() != num_indices) {
-          throw std::runtime_error("Some outputs have an output index and some do not");
-        }
-
-        // merge by output indices if present
-        if (num_indices > 0) {
-          for (const std::shared_ptr<monero_output>& merger : other->m_outputs) {
-            bool merged = false;
-            merger->m_tx = self;
-            for (const std::shared_ptr<monero_output>& mergee : this->m_outputs) {
-              if (mergee->m_index.get() == merger->m_index.get()) {
-                mergee->merge(mergee, merger);
-                merged = true;
-                break;
-              }
-            }
-            if (!merged) this->m_outputs.push_back(merger);
-          }
-        } else {
-
-          // determine if key images present
-          int numKeyImages = 0;
-          for (const std::shared_ptr<monero_output> output : m_outputs) {
-            if (output->m_key_image != boost::none) {
-              if ((*output->m_key_image)->m_hex == boost::none) throw std::runtime_error("Key image hex cannot be null");
-              numKeyImages++;
+        // merge outputs if key image or stealth public key present, otherwise append
+        for (const std::shared_ptr<monero_output>& merger : other->m_outputs) {
+          bool merged = false;
+          merger->m_tx = self;
+          for (const std::shared_ptr<monero_output>& mergee : m_outputs) {
+            if ((merger->m_key_image != boost::none && (*mergee->m_key_image)->m_hex == (*merger->m_key_image)->m_hex) ||
+                (merger->m_stealth_public_key != boost::none && *mergee->m_stealth_public_key == *merger->m_stealth_public_key)) {
+              mergee->merge(mergee, merger);
+              merged = true;
+              break;
             }
           }
-          for (const std::shared_ptr<monero_output>& output : other->m_outputs) {
-            if (output->m_key_image != boost::none) {
-              if ((*output->m_key_image)->m_hex == boost::none) throw std::runtime_error("Key image hex cannot be null");
-              numKeyImages++;
-            }
-          }
-          if (numKeyImages != 0 && m_outputs.size() + other->m_outputs.size() != numKeyImages) throw std::runtime_error("Some outputs have a key image and some do not");
-
-          // merge by key images
-          if (numKeyImages > 0) {
-            for (const std::shared_ptr<monero_output>& merger : other->m_outputs) {
-              bool merged = false;
-              merger->m_tx = self;
-              for (const std::shared_ptr<monero_output>& mergee : m_outputs) {
-                if ((*mergee->m_key_image)->m_hex == (*merger->m_key_image)->m_hex) {
-                  mergee->merge(mergee, merger);
-                  merged = true;
-                  break;
-                }
-              }
-              if (!merged) m_outputs.push_back(merger);
-            }
-          }
-
-          // merge by position
-          else {
-            if (m_outputs.size() != other->m_outputs.size()) throw std::runtime_error("Vout sizes are different");
-            for (int i = 0; i < other->m_outputs.size(); i++) {
-              m_outputs.at(i)->merge(m_outputs.at(i), other->m_outputs.at(i));
-            }
-          }
+          if (!merged) m_outputs.push_back(merger); // append output
         }
       }
     }
@@ -614,7 +565,11 @@ namespace monero {
   }
 
   void monero_key_image::merge(const std::shared_ptr<monero_key_image>& self, const std::shared_ptr<monero_key_image>& other) {
-    throw std::runtime_error("Not implemented");
+    MTRACE("monero_key_image::merge(self, other)");
+    if (this != self.get()) throw std::runtime_error("this != self");
+    if (self == other) return;
+    m_hex = gen_utils::reconcile(m_hex, other->m_hex);
+    m_signature = gen_utils::reconcile(m_signature, other->m_signature);
   }
 
   // ------------------------------ MONERO OUTPUT -----------------------------

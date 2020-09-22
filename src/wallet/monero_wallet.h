@@ -389,6 +389,18 @@ namespace monero {
     virtual uint64_t get_daemon_max_peer_height() const {
       throw std::runtime_error("get_daemon_max_peer_height() not supported");
     }
+    
+    /**
+     * Get the blockchain's height by date as a conservative estimate for scanning.
+     * 
+     * @param year - year of the height to get
+     * @param month - month of the height to get as a number between 1 and 12
+     * @param day - day of the height to get as a number between 1 and 31
+     * @return the blockchain's approximate height at the given date
+     */
+    virtual uint64_t get_height_by_date(uint16_t year, uint8_t month, uint8_t day) const {
+      throw std::runtime_error("get_height_by_date(year, month, day) not supported");
+    }
 
     /**
      * Register a listener receive wallet notifications.
@@ -1252,14 +1264,21 @@ namespace monero {
       throw std::runtime_error("is_multisig_import_needed() not supported");
     }
 
-    // TODO: bool is_multisig()
+    /**
+     * Indicates if this wallet is a multisig wallet.
+     *
+     * @return true if this is a multisig wallet, false otherwise
+     */
+    virtual bool is_multisig() const {
+      return get_multisig_info().m_is_multisig;
+    }
 
     /**
      * Get multisig info about this wallet.
      *
      * @return multisig info about this wallet
      */
-    virtual monero_multisig_info get_multisig_info() {
+    virtual monero_multisig_info get_multisig_info() const {
       throw std::runtime_error("get_multisig_info() not supported");
     }
 
