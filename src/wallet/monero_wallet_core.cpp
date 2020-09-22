@@ -699,6 +699,8 @@ namespace monero {
       this->m_sync_end_height = boost::none;
       m_prev_balance = wallet.get_balance();
       m_prev_unlocked_balance = wallet.get_unlocked_balance();
+      m_prev_offshore_balance = get_offshore_balance();
+      m_prev_unlocked_offshore_balance = get_unlocked_offshore_balance();
     }
 
     ~wallet2_listener() {
@@ -851,6 +853,8 @@ namespace monero {
     boost::optional<uint64_t> m_sync_end_height;
     uint64_t m_prev_balance;
     uint64_t m_prev_unlocked_balance;
+    uint64_t m_prev_offshore_balance;
+    uint64_t m_prev_unlocked_offshore_balance;
     std::vector<std::shared_ptr<monero_tx_wallet>> m_locked_txs;
 
     void check_for_changed_funds() {
@@ -860,6 +864,11 @@ namespace monero {
         m_prev_balance = m_wallet.get_balance();
         m_prev_unlocked_balance = m_wallet.get_unlocked_balance();
       }
+      if (m_prev_offshore_balance != m_wallet.get_offshore_balance() || m_prev_unlocked_offshore_balance != m_wallet.get_unlocked_offshore_balance()) {
+        on_offshore_balances_changed(m_wallet.get_offshore_balance(), m_wallet.get_unlocked_offshore_balance());
+        m_prev_offshore_balance = m_wallet.get_offshore_balance();
+        m_prev_unlocked_offshore_balance = m_wallet.get_unlocked_offshore_balance();
+    }
       if (m_wallet.is_synced()) check_for_changed_unlocked_txs(); // check for newly unlocked outputs if synced
     }
 
@@ -867,6 +876,13 @@ namespace monero {
       if (m_wallet.get_listeners().empty()) return;
       for (monero_wallet_listener* listener : m_wallet.get_listeners()) {
         listener->on_balances_changed(new_balance, new_unlocked_balance);
+      }
+    }
+
+       void on_offshore_balances_changed(uint64_t new_balance, uint64_t new_unlocked_balance) {
+      if (m_wallet.get_listeners().empty()) return;
+      for (monero_wallet_listener* listener : m_wallet.get_listeners()) {
+        listener->on_offshore_balances_changed(new_balance, new_unlocked_balance);
       }
     }
 
