@@ -144,8 +144,7 @@ namespace monero {
     tx->m_in_tx_pool = false;
     tx->m_relay = true;
     tx->m_is_double_spend_seen = false;
-    tx->m_currency = ( pd.m_offshore || pd.m_offshore_to_offshore) ? "xUSD" : "XHV";
-
+    
     // compute m_num_confirmations TODO monero core: this logic is based on wallet_rpc_server.cpp:87 but it should be encapsulated in wallet2
     // TODO: factor out this duplicate code with build_tx_with_outgoing_transfer()
     if (*block->m_height >= height || (*block->m_height == 0 && !*tx->m_in_tx_pool)) tx->m_num_confirmations = 0;
@@ -156,6 +155,7 @@ namespace monero {
     incoming_transfer->m_tx = tx;
     tx->m_incoming_transfers.push_back(incoming_transfer);
     incoming_transfer->m_amount = pd.m_amount;
+    incoming_transfer->m_currency = ( pd.m_offshore || pd.m_offshore_to_offshore) ? "xUSD" : "XHV";
     incoming_transfer->m_account_index = pd.m_subaddr_index.major;
     incoming_transfer->m_subaddress_index = pd.m_subaddr_index.minor;
     incoming_transfer->m_address = m_w2.get_subaddress_as_str(pd.m_subaddr_index);
@@ -198,7 +198,6 @@ namespace monero {
     tx->m_in_tx_pool = false;
     tx->m_relay = true;
     tx->m_is_double_spend_seen = false;
-    tx->m_currency = ((pd.m_offshore_to_offshore || pd.m_onshore) ? "xUSD" : "XHV");
 
     // compute m_num_confirmations TODO monero core: this logic is based on wallet_rpc_server.cpp:87 but it should be encapsulated in wallet2
     if (*block->m_height >= height || (*block->m_height == 0 && !*tx->m_in_tx_pool)) tx->m_num_confirmations = 0;
@@ -211,6 +210,8 @@ namespace monero {
     uint64_t change = pd.m_change == (uint64_t)-1 ? 0 : pd.m_change; // change may not be known
     outgoing_transfer->m_amount = pd.m_amount_in - change - *tx->m_fee;
     outgoing_transfer->m_account_index = pd.m_subaddr_account;
+    outgoing_transfer->m_currency = ((pd.m_offshore_to_offshore || pd.m_onshore) ? "xUSD" : "XHV");
+
     std::vector<uint32_t> subaddress_indices;
     std::vector<std::string> addresses;
     for (uint32_t i: pd.m_subaddr_indices) {
@@ -263,7 +264,6 @@ namespace monero {
     tx->m_relay = true;
     tx->m_is_double_spend_seen = ppd.m_double_spend_seen;
     tx->m_num_confirmations = 0;
-    tx->m_currency = ( pd.m_offshore || pd.m_offshore_to_offshore)? "xUSD" : "XHV";
 
     // construct transfer
     std::shared_ptr<monero_incoming_transfer> incoming_transfer = std::make_shared<monero_incoming_transfer>();
@@ -273,6 +273,7 @@ namespace monero {
     incoming_transfer->m_account_index = pd.m_subaddr_index.major;
     incoming_transfer->m_subaddress_index = pd.m_subaddr_index.minor;
     incoming_transfer->m_address = m_w2.get_subaddress_as_str(pd.m_subaddr_index);
+    incoming_transfer->m_currency = ( pd.m_offshore || pd.m_offshore_to_offshore)? "xUSD" : "XHV";
 
     // compute m_num_suggested_confirmations  TODO monero core: this logic is based on wallet_rpc_server.cpp:87 but it should be encapsulated in wallet2
     uint64_t block_reward = m_w2.get_last_block_reward();
@@ -305,13 +306,14 @@ namespace monero {
     tx->m_relay = true;
     if (!tx->m_is_failed.get() && tx->m_is_relayed.get()) tx->m_is_double_spend_seen = false;  // TODO: test and handle if true
     tx->m_num_confirmations = 0;
-    tx->m_currency = (pd.m_offshore_to_offshore || pd.m_onshore)? "xUSD" : "XHV";
 
     // construct transfer
     std::shared_ptr<monero_outgoing_transfer> outgoing_transfer = std::make_shared<monero_outgoing_transfer>();
     outgoing_transfer->m_tx = tx;
     tx->m_outgoing_transfer = outgoing_transfer;
     outgoing_transfer->m_amount = pd.m_amount_in - pd.m_change - tx->m_fee.get();
+    outgoing_transfer->m_currency = (pd.m_offshore_to_offshore || pd.m_onshore)? "xUSD" : "XHV";
+
     outgoing_transfer->m_account_index = pd.m_subaddr_account;
     std::vector<uint32_t> subaddress_indices;
     std::vector<std::string> addresses;
@@ -699,8 +701,8 @@ namespace monero {
       this->m_sync_end_height = boost::none;
       m_prev_balance = wallet.get_balance();
       m_prev_unlocked_balance = wallet.get_unlocked_balance();
-      m_prev_offshore_balance = get_offshore_balance();
-      m_prev_unlocked_offshore_balance = get_unlocked_offshore_balance();
+      m_prev_offshore_balance = wallet.get_offshore_balance();
+      m_prev_unlocked_offshore_balance = wallet.get_unlocked_offshore_balance();
     }
 
     ~wallet2_listener() {
@@ -747,18 +749,11 @@ namespace monero {
       check_for_changed_funds();
     }
 
-    void on_offshore_balances_changed(uint64_t new_offshore_balance, uint64_t new_unlocked_offshore_balance) {
-      if (m_wallet.get_listeners().empty()) return;
-      for (monero_wallet_listener* listener : m_wallet.get_listeners()) {
-        listener->on_offshore_balances_changed(new_offshore_balance, new_unlocked_offshore_balance);
-      }
-    }
-
     void on_unconfirmed_money_received(uint64_t height, const crypto::hash &txid, const cryptonote::transaction& cn_tx, uint64_t amount, const cryptonote::subaddress_index& subaddr_index) override {
       if (m_wallet.get_listeners().empty()) return;
 
       // create library tx
-      std::shared_ptr<monero_tx_wallet> tx = std::static_pointer_cast<monero_tx_wallet>(monero_utils::cn_tx_to_tx(cn_tx, true));
+ /*      std::shared_ptr<monero_tx_wallet> tx = std::static_pointer_cast<monero_tx_wallet>(monero_utils::cn_tx_to_tx(cn_tx, true));
       tx->m_hash = epee::string_tools::pod_to_hex(txid);
       tx->m_is_locked = true;
       std::shared_ptr<monero_output_wallet> output = std::make_shared<monero_output_wallet>();
@@ -771,21 +766,21 @@ namespace monero {
       // notify listeners of output
       for (monero_wallet_listener* listener : m_wallet.get_listeners()) {
         listener->on_output_received(*output);
-      }
+      } */
 
       // notify if balances or unlocked txs changed
       check_for_changed_funds();
 
       // free memory
-      output.reset();
-      tx.reset();
+   /*    output.reset();
+      tx.reset(); */
     }
 
     void on_money_received(uint64_t height, const crypto::hash &txid, const cryptonote::transaction& cn_tx, uint64_t amount, const cryptonote::subaddress_index& subaddr_index, bool is_change, uint64_t unlock_height, bool offshore) override {
       if (m_wallet.get_listeners().empty()) return;
 
       // create native library tx
-      std::shared_ptr<monero_block> block = std::make_shared<monero_block>();
+    /*   std::shared_ptr<monero_block> block = std::make_shared<monero_block>();
       block->m_height = height;
       std::shared_ptr<monero_tx_wallet> tx = std::static_pointer_cast<monero_tx_wallet>(monero_utils::cn_tx_to_tx(cn_tx, true));
       block->m_txs.push_back(tx);
@@ -803,20 +798,20 @@ namespace monero {
       // notify listeners of output
       for (monero_wallet_listener* listener : m_wallet.get_listeners()) {
         listener->on_output_received(*output);
-      }
+      } */
 
       // notify if balances changed
       check_for_changed_funds();
 
       // free memory
-      monero_utils::free(block);
+/*       monero_utils::free(block);
       output.reset();
-      tx.reset();
+      tx.reset(); */
     }
 
     void on_money_spent(uint64_t height, const crypto::hash &txid, const cryptonote::transaction& cn_tx_in, uint64_t amount, const cryptonote::transaction& cn_tx_out, const cryptonote::subaddress_index& subaddr_index, bool offshore) override {
       if (m_wallet.get_listeners().empty()) return;
-      if (&cn_tx_in != &cn_tx_out) throw std::runtime_error("on_money_spent() in tx is different than out tx");
+  /*     if (&cn_tx_in != &cn_tx_out) throw std::runtime_error("on_money_spent() in tx is different than out tx");
 
       // create native library tx
       std::shared_ptr<monero_block> block = std::make_shared<monero_block>();
@@ -835,15 +830,15 @@ namespace monero {
       // notify listeners of output
       for (monero_wallet_listener* listener : m_wallet.get_listeners()) {
         listener->on_output_spent(*output);
-      }
+      } */
 
       // notify if balances changed
       check_for_changed_funds();
 
       // free memory
-      monero_utils::free(block);
+/*       monero_utils::free(block);
       output.reset();
-      tx.reset();
+      tx.reset(); */
     }
 
   private:
@@ -1825,7 +1820,7 @@ namespace monero {
 
   
     // prepare transactions
-    std::vector<wallet2::pending_tx> ptx_vector = m_w2->create_transactions_2(dsts, mixin, unlock_height, priority, extra, account_index, subaddress_indices);
+    std::vector<wallet2::pending_tx> ptx_vector = m_w2->create_transactions_2(dsts, mixin, unlock_time, priority, extra, account_index, subaddress_indices);
     if (ptx_vector.empty()) throw std::runtime_error("No transaction created");
 
     // check if request cannot be fulfilled due to splitting
@@ -1860,6 +1855,7 @@ namespace monero {
     auto tx_hashes_iter = tx_hashes.begin();
     auto tx_keys_iter = tx_keys.begin();
     auto tx_amounts_iter = tx_amounts.begin();
+    auto tx_amounts_usd_iter = tx_amounts_usd.begin();
     auto tx_fees_iter = tx_fees.begin();
     auto tx_weights_iter = tx_weights.begin();
     auto tx_blobs_iter = tx_blobs.begin();
@@ -1877,13 +1873,26 @@ namespace monero {
       tx->m_metadata = *tx_metadatas_iter;
       std::shared_ptr<monero_outgoing_transfer> out_transfer = std::make_shared<monero_outgoing_transfer>();
       tx->m_outgoing_transfer = out_transfer;
-      out_transfer->m_amount = *tx_amounts_iter;
+      out_transfer->m_amount = (tx_type == OFFSHORE_TX || tx_type == CLASSIC_TX) ? *tx_amounts_iter : *tx_amounts_usd_iter;
+      out_transfer->m_currency = (tx_type == OFFSHORE_TX || tx_type == CLASSIC_TX) ? "XHV" : "xUSD"; 
+
+      // for onshores/offshores create incoming tx ( even if not send to yourself, to extract counter value later)
+      if (tx_type == OFFSHORE_TX || tx_type == ONSHORE_TX) {
+
+
+        std::shared_ptr<monero_incoming_transfer> incoming_transfer = std::make_shared<monero_incoming_transfer>();
+        incoming_transfer->m_tx = tx;
+        tx->m_incoming_transfers.push_back(incoming_transfer);
+        incoming_transfer->m_amount = (tx_type == OFFSHORE_TX) ? *tx_amounts_usd_iter : *tx_amounts_iter;
+        incoming_transfer->m_currency = (tx_type == OFFSHORE_TX) ? "xUSD" : "XHV"; 
+
+      }
+
 
       // init other known fields
       tx->m_is_outgoing = true;
       tx->m_payment_id = config.m_payment_id;
       tx->m_is_confirmed = false;
-      tx->m_currency = (config.m_tx_type == OFFSHORE_TX || config.m_tx_type == CLASSIC_TX) ? "XHV" : "xUSD"; 
       tx->m_is_miner_tx = false;
       tx->m_is_failed = false;   // TODO: test and handle if true
       tx->m_relay = config.m_relay != boost::none && config.m_relay.get();

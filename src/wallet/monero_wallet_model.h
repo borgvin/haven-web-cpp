@@ -129,7 +129,9 @@ namespace monero {
    * TODO: m_is_incoming for api consistency
    */
   struct monero_transfer : serializable_struct {
+
     std::shared_ptr<monero_tx_wallet> m_tx;
+    boost::optional<std::string> m_currency;
     boost::optional<uint64_t> m_amount;
     boost::optional<uint32_t> m_account_index;
 

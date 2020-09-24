@@ -622,6 +622,10 @@ namespace monero {
     if (m_amount != boost::none) monero_utils::addJsonMember("amount", m_amount.get(), allocator, root, value_num);
     if (m_account_index != boost::none) monero_utils::addJsonMember("accountIndex", m_account_index.get(), allocator, root, value_num);
 
+     // set std::string values
+    rapidjson::Value value_str(rapidjson::kStringType);
+    if (m_currency != boost::none) monero_utils::addJsonMember("currency", m_currency.get(), allocator, root, value_str);
+
     // return root
     return root;
   }
@@ -640,6 +644,7 @@ namespace monero {
     tgt->m_tx = src->m_tx;  // reference parent tx by default
     tgt->m_amount = src->m_amount;
     tgt->m_account_index = src->m_account_index;
+    tgt->m_currency = src->m_currency;
     return tgt;
   }
 
@@ -652,7 +657,7 @@ namespace monero {
       m_tx->merge(m_tx, other->m_tx);
       return;
     }
-
+    m_currency = gen_utils::reconcile(m_currency, other->m_currency);
     // otherwise merge transfer fields
     m_account_index = gen_utils::reconcile(m_account_index, other->m_account_index, "acountIndex");
 

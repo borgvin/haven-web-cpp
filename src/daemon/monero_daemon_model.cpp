@@ -272,7 +272,6 @@ namespace monero {
     if (m_rct_sig_prunable != boost::none) monero_utils::addJsonMember("rctSigPrunable", m_rct_sig_prunable.get(), allocator, root, value_str);
     if (m_last_failed_hash != boost::none) monero_utils::addJsonMember("lastFailedHash", m_last_failed_hash.get(), allocator, root, value_str);
     if (m_max_used_block_hash != boost::none) monero_utils::addJsonMember("maxUsedBlockHash", m_max_used_block_hash.get(), allocator, root, value_str);
-    if (m_currency != boost::none) monero_utils::addJsonMember("currency", m_currency.get(), allocator, root, value_str);
     // set bool values
     if (m_is_miner_tx != boost::none) monero_utils::addJsonMember("isMinerTx", m_is_miner_tx.get(), allocator, root);
     if (m_relay != boost::none) monero_utils::addJsonMember("relay", m_relay.get(), allocator, root);
@@ -303,9 +302,7 @@ namespace monero {
       else if (key == std::string("version")) throw std::runtime_error("version deserializationn not implemented");
       else if (key == std::string("isMinerTx")) tx->m_is_miner_tx = it->second.get_value<bool>();
       else if (key == std::string("paymentId")) tx->m_payment_id = it->second.data();
-      else if (key == std::string("currency")) tx->m_currency = it->second.data();
       else if (key == std::string("fee")) tx->m_fee = it->second.get_value<uint64_t>();
-      else if (key == std::string("mixin")) throw std::runtime_error("mixin deserialization not implemented");
       else if (key == std::string("relay")) tx->m_relay = it->second.get_value<bool>();
       else if (key == std::string("isRelayed")) tx->m_is_relayed = it->second.get_value<bool>();
       else if (key == std::string("isConfirmed")) tx->m_is_confirmed = it->second.get_value<bool>();
@@ -346,7 +343,6 @@ namespace monero {
     tgt->m_version = src->m_version;
     tgt->m_is_miner_tx = src->m_is_miner_tx;
     tgt->m_payment_id = src->m_payment_id;
-    tgt->m_currency = src->m_currency;
     tgt->m_fee = src->m_fee;
     tgt->m_ring_size = src->m_ring_size;
     tgt->m_relay = src->m_relay;
@@ -426,8 +422,8 @@ namespace monero {
     m_hash = gen_utils::reconcile(m_hash, other->m_hash);
     m_version = gen_utils::reconcile(m_version, other->m_version);
     m_payment_id = gen_utils::reconcile(m_payment_id, other->m_payment_id);
-    m_currency = gen_utils::reconcile(m_currency, other->m_currency);
-    m_fee = gen_utils::reconcile(m_fee, other->m_fee, "tx fee");
+    // m_currency = gen_utils::reconcile(m_currency, other->m_currency);
+   // m_fee = gen_utils::reconcile(m_fee, other->m_fee, "tx fee");
     m_ring_size = gen_utils::reconcile(m_ring_size, other->m_ring_size, "tx m_ring_size");
     m_is_confirmed = gen_utils::reconcile(m_is_confirmed, other->m_is_confirmed);
     m_is_miner_tx = gen_utils::reconcile(m_is_miner_tx, other->m_is_miner_tx);
