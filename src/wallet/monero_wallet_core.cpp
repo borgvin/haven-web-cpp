@@ -1773,6 +1773,11 @@ namespace monero {
       // check tx type and set extra data and unlock time accordingly
     if (tx_type == OFFSHORE_TX || tx_type == ONSHORE_TX) {
 
+
+      //increment priority -> for onshore/offhore we use a priority range from 1-4, but for default 0-3
+      //therefore we increment here when its onshore/offshore 
+      priority++;
+
       // set unlock time 
       if (m_w2->use_fork_rules(HF_VERSION_OFFSHORE_FEES_V2, 0)) {
 	        unlock_time = ((priority == 4) ? 180 : (priority == 3) ? 720 : (priority == 2) ? 1440 : 5040) + m_w2->get_blockchain_current_height();
