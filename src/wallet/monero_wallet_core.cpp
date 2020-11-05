@@ -1778,13 +1778,19 @@ namespace monero {
       //therefore we increment here when its onshore/offshore 
       priority++;
 
-      // set unlock time 
-      if (m_w2->use_fork_rules(HF_VERSION_OFFSHORE_FEES_V2, 0)) {
-	        unlock_time = ((priority == 4) ? 180 : (priority == 3) ? 720 : (priority == 2) ? 1440 : 5040) + m_w2->get_blockchain_current_height();
-      } else {
-	        unlock_time = 60 * pow(3, std::max((uint32_t)0, 4-priority)) + m_w2->get_blockchain_current_height();
+        // set unlock time
+      if (m_w2->use_fork_rules(HF_VERSION_OFFSHORE_FEES_V3, 0))
+      {
+        unlock_time = ((priority == 4) ? 180 : (priority == 3) ? 1440 : (priority == 2) ? 3600 : 7200) + m_w2->get_blockchain_current_height();
       }
-
+      else if (m_w2->use_fork_rules(HF_VERSION_OFFSHORE_FEES_V2, 0))
+      {
+        unlock_time = ((priority == 4) ? 180 : (priority == 3) ? 720 : (priority == 2) ? 1440 : 5040) + m_w2->get_blockchain_current_height();
+      }
+      else
+      {
+        unlock_time = 60 * pow(3, std::max((uint32_t)0, 4 - priority)) + m_w2->get_blockchain_current_height();
+      }
       if (tx_type == OFFSHORE_TX) {
         // Populate the txextra to signify that this is an offshore tx
         cryptonote::tx_extra_offshore offshore_data;
