@@ -1117,6 +1117,7 @@ namespace monero {
     }
     m_payment_id = config.m_payment_id;
     m_priority = config.m_priority;
+    m_tx_type = config.m_tx_type;
     m_ring_size = config.m_ring_size;
     m_fee = config.m_fee;
     m_account_index = config.m_account_index;
@@ -1143,6 +1144,7 @@ namespace monero {
     // set num values
     rapidjson::Value value_num(rapidjson::kNumberType);
     if (m_priority != boost::none) monero_utils::addJsonMember("priority", m_priority.get(), allocator, root, value_num);
+    if (m_priority != boost::none) monero_utils::addJsonMember("txType", m_tx_type.get(), allocator, root, value_num);
     if (m_ring_size != boost::none) monero_utils::addJsonMember("ringSize", m_ring_size.get(), allocator, root, value_num);
     if (m_account_index != boost::none) monero_utils::addJsonMember("accountIndex", m_account_index.get(), allocator, root, value_num);
     if (m_unlock_height != boost::none) monero_utils::addJsonMember("unlockHeight", m_unlock_height.get(), allocator, root, value_num);

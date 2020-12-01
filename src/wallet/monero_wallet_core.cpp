@@ -1945,6 +1945,9 @@ namespace monero {
     if (destinations[0]->m_address == boost::none) throw std::runtime_error("Must specify destination address to sweep to");
     if (destinations[0]->m_amount != boost::none) throw std::runtime_error("Cannot specify amount to sweep");
     if (config.m_account_index == boost::none && config.m_subaddress_indices.size() != 0) throw std::runtime_error("Must specify account index if subaddress indices are specified");
+    // validate tx_type
+    if (config.m_tx_type == boost::none)
+      throw std::runtime_error("Must specify tx type");
 
     // determine account and subaddress indices to sweep; default to all with unlocked balance if not specified
     std::map<uint32_t, std::vector<uint32_t>> indices;
@@ -2013,6 +2016,10 @@ namespace monero {
     if (config.m_key_image != boost::none) throw std::runtime_error("Cannot define key image in sweep_account(); use sweep_output() to sweep an output by its key image");
     if (config.m_sweep_each_subaddress != boost::none && config.m_sweep_each_subaddress.get() == true) throw std::runtime_error("Cannot sweep each subaddress individually with sweep_account");
 
+    // validate tx_type
+    if (config.m_tx_type == boost::none)
+      throw std::runtime_error("Must specify tx type");
+
     // validate the transfer requested and populate dsts & extra
     std::list<wallet_rpc::transfer_destination> destination;
     destination.push_back(wallet_rpc::transfer_destination());
@@ -2021,6 +2028,18 @@ namespace monero {
     std::string payment_id = config.m_payment_id == boost::none ? std::string("") : config.m_payment_id.get();
     std::vector<cryptonote::tx_destination_entry> dsts;
     std::vector<uint8_t> extra;
+
+    uint32_t tx_type = config.m_tx_type.get();
+    bool bOffshoreTx = tx_type == OFFSHORE_TO_OFFSHORE_TX;
+    if (bOffshoreTx)
+    {
+
+      // Populate the txextra to signify that this is an offshore tx
+      cryptonote::tx_extra_offshore offshore_data;
+      offshore_data.data = "NN";
+      cryptonote::add_offshore_to_tx_extra(extra, offshore_data);
+    }
+
     epee::json_rpc::error err;
     if (!validate_transfer(m_w2.get(), destination, payment_id, dsts, extra, true, err)) {
       throw std::runtime_error("Failed to validate sweep_account transfer request");
@@ -2035,12 +2054,13 @@ namespace monero {
     uint32_t priority = m_w2->adjust_priority(config.m_priority == boost::none ? 0 : config.m_priority.get());
     uint64_t unlock_height = config.m_unlock_height == boost::none ? 0 : config.m_unlock_height.get();
     uint32_t account_index = config.m_account_index.get();
+
+
     std::set<uint32_t> subaddress_indices;
     for (const uint32_t& subaddress_idx : config.m_subaddress_indices) subaddress_indices.insert(subaddress_idx);
 
     // prepare transactions
     std::vector<wallet2::pending_tx> ptx_vector = m_w2->create_transactions_all(below_amount, dsts[0].addr, dsts[0].is_subaddress, num_outputs, mixin, unlock_height, priority, extra, account_index, subaddress_indices);
-
     // config for fill_response()
     bool get_tx_keys = true;
     bool get_tx_hex = true;
@@ -2050,7 +2070,7 @@ namespace monero {
     // commit txs (if relaying) and get response using wallet rpc's fill_response()
     std::list<std::string> tx_keys;
     std::list<uint64_t> tx_amounts;
-     std::list<uint64_t> tx_amounts_usd;
+    std::list<uint64_t> tx_amounts_usd;
     std::list<uint64_t> tx_fees;
     std::list<uint64_t> tx_weights;
     std::string multisig_tx_hex;
@@ -2067,6 +2087,7 @@ namespace monero {
     auto tx_hashes_iter = tx_hashes.begin();
     auto tx_keys_iter = tx_keys.begin();
     auto tx_amounts_iter = tx_amounts.begin();
+    auto tx_amounts_usd_iter = tx_amounts_usd.begin();
     auto tx_fees_iter = tx_fees.begin();
     auto tx_weights_iter = tx_weights.begin();
     auto tx_blobs_iter = tx_blobs.begin();
@@ -2086,7 +2107,8 @@ namespace monero {
       tx->m_metadata = *tx_metadatas_iter;
       std::shared_ptr<monero_outgoing_transfer> out_transfer = std::make_shared<monero_outgoing_transfer>();
       tx->m_outgoing_transfer = out_transfer;
-      out_transfer->m_amount = *tx_amounts_iter;
+      out_transfer->m_amount = bOffshoreTx ? *tx_amounts_usd_iter : *tx_amounts_iter;
+      out_transfer->m_currency = bOffshoreTx ? "xUSD" : "XHV";
       std::shared_ptr<monero_destination> destination = std::make_shared<monero_destination>(destinations[0]->m_address.get(), out_transfer->m_amount.get());
       out_transfer->m_destinations.push_back(destination);
 
