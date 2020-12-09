@@ -1767,7 +1767,10 @@ namespace monero {
     std::vector<uint8_t> extra;
     epee::json_rpc::error err;
 
-    uint32_t priority = m_w2->adjust_priority(config.m_priority == boost::none ? 0 : config.m_priority.get());
+    // TODO adjusting prio for onshore/offshore leads to side effects and not needed
+    // uint32_t priority = m_w2->adjust_priority(config.m_priority == boost::none ? 0 : config.m_priority.get());
+
+    uint32_t priority = config.m_priority.get();
     uint64_t unlock_time = 0;
 
       // check tx type and set extra data and unlock time accordingly
