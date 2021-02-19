@@ -212,6 +212,17 @@ rapidjson::Value monero_utils::to_rapidjson_val(rapidjson::Document::AllocatorTy
   return value_arr;
 }
 
+  rapidjson::Value to_rapidjson_val(rapidjson::Document::AllocatorType& allocator, const std::map<std::string, uint64_t>& map) {
+
+    rapidjson::Value value_obj(rapidjson::kObjectType);
+    rapidjson::Value value_num(rapidjson::kNumberType);
+    for (const auto& m : map) {
+      addJsonMember(m.first, m.second, allocator, value_obj, value_num);
+    }
+    return value_obj;
+  }
+
+
 // ------------------------ PROPERTY TREES ---------------------------
 
 std::string monero_utils::serialize(const boost::property_tree::ptree& node) {

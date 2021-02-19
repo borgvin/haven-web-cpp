@@ -188,7 +188,7 @@ namespace monero {
     if (tx->m_payment_id == monero_tx::DEFAULT_PAYMENT_ID) tx->m_payment_id = boost::none;  // clear default payment id
     tx->m_unlock_height = pd.m_unlock_time;
     tx->m_is_locked = !m_w2.is_transfer_unlocked(pd.m_unlock_time, pd.m_block_height);
-    tx->m_fee = pd.m_amount_in - pd.m_amount_out;
+   // tx->m_fee = pd.m_amount_in - pd.m_amount_out;
     tx->m_note = m_w2.get_tx_note(txid);
     if (tx->m_note->empty()) tx->m_note = boost::none; // clear empty note
     tx->m_is_miner_tx = false;
@@ -210,7 +210,7 @@ namespace monero {
     uint64_t change = pd.m_change == (uint64_t)-1 ? 0 : pd.m_change; // change may not be known
     outgoing_transfer->m_amount = pd.m_amount_in - change - *tx->m_fee;
     outgoing_transfer->m_account_index = pd.m_subaddr_account;
-    outgoing_transfer->m_currency = ((pd.m_offshore_to_offshore || pd.m_onshore) ? "xUSD" : "XHV");
+    outgoing_transfer->m_currency = pd.m_source_currency_type;
 
     std::vector<uint32_t> subaddress_indices;
     std::vector<std::string> addresses;
@@ -296,7 +296,8 @@ namespace monero {
     if (tx->m_payment_id == monero_tx::DEFAULT_PAYMENT_ID) tx->m_payment_id = boost::none;  // clear default payment id
     tx->m_unlock_height = pd.m_tx.unlock_time;
     tx->m_is_locked = true;
-    tx->m_fee = pd.m_amount_in - pd.m_amount_out;
+    // TODO how is new fee calculated
+    // tx->m_fee = pd.m_amount_in - pd.m_amount_out;
     tx->m_note = m_w2.get_tx_note(txid);
     if (tx->m_note->empty()) tx->m_note = boost::none; // clear empty note
     tx->m_is_miner_tx = false;
@@ -311,8 +312,9 @@ namespace monero {
     std::shared_ptr<monero_outgoing_transfer> outgoing_transfer = std::make_shared<monero_outgoing_transfer>();
     outgoing_transfer->m_tx = tx;
     tx->m_outgoing_transfer = outgoing_transfer;
-    outgoing_transfer->m_amount = pd.m_amount_in - pd.m_change - tx->m_fee.get();
-    outgoing_transfer->m_currency = (pd.m_offshore_to_offshore || pd.m_onshore)? "xUSD" : "XHV";
+    //TODO calc amount 
+   // outgoing_transfer->m_amount = pd.m_amount_in - pd.m_change - tx->m_fee.get();
+    outgoing_transfer->m_currency = pd.m_source_currency_type;
 
     outgoing_transfer->m_account_index = pd.m_subaddr_account;
     std::vector<uint32_t> subaddress_indices;
@@ -699,10 +701,10 @@ namespace monero {
     wallet2_listener(monero_wallet_core& wallet, tools::wallet2& m_w2) : m_wallet(wallet), m_w2(m_w2) {
       this->m_sync_start_height = boost::none;
       this->m_sync_end_height = boost::none;
-      m_prev_balance = wallet.get_balance();
-      m_prev_unlocked_balance = wallet.get_unlocked_balance();
-      m_prev_offshore_balance = wallet.get_offshore_balance();
-      m_prev_unlocked_offshore_balance = wallet.get_unlocked_offshore_balance();
+      //TODO adjust balance types 
+      //m_prev_balance = wallet.get_balance();
+      // m_prev_unlocked_balance = wallet.get_unlocked_balance();
+
     }
 
     ~wallet2_listener() {
@@ -776,7 +778,7 @@ namespace monero {
       tx.reset(); */
     }
 
-    void on_money_received(uint64_t height, const crypto::hash &txid, const cryptonote::transaction& cn_tx, uint64_t amount, const cryptonote::subaddress_index& subaddr_index, bool is_change, uint64_t unlock_height, bool offshore) override {
+    void on_money_received(uint64_t height, const crypto::hash &txid, const cryptonote::transaction& cn_tx, uint64_t amount, const cryptonote::subaddress_index& subaddr_index, bool is_change, uint64_t unlock_height, std::string asset_type) override {
       if (m_wallet.get_listeners().empty()) return;
 
       // create native library tx
@@ -809,7 +811,7 @@ namespace monero {
       tx.reset(); */
     }
 
-    void on_money_spent(uint64_t height, const crypto::hash &txid, const cryptonote::transaction& cn_tx_in, uint64_t amount, const cryptonote::transaction& cn_tx_out, const cryptonote::subaddress_index& subaddr_index, bool offshore) override {
+    void on_money_spent(uint64_t height, const crypto::hash &txid, const cryptonote::transaction& cn_tx_in, uint64_t amount, const cryptonote::transaction& cn_tx_out, const cryptonote::subaddress_index& subaddr_index, std::string asset_type) override {
       if (m_wallet.get_listeners().empty()) return;
   /*     if (&cn_tx_in != &cn_tx_out) throw std::runtime_error("on_money_spent() in tx is different than out tx");
 
@@ -848,36 +850,23 @@ namespace monero {
     boost::optional<uint64_t> m_sync_end_height;
     uint64_t m_prev_balance;
     uint64_t m_prev_unlocked_balance;
-    uint64_t m_prev_offshore_balance;
-    uint64_t m_prev_unlocked_offshore_balance;
     std::vector<std::shared_ptr<monero_tx_wallet>> m_locked_txs;
 
     void check_for_changed_funds() {
       if (m_wallet.get_listeners().empty()) return; // skip if no listeners
-      if (m_prev_balance != m_wallet.get_balance() || m_prev_unlocked_balance != m_wallet.get_unlocked_balance()) {
+      //TODO adjust balance type
+  /*     if (m_prev_balance != m_wallet.get_balance() || m_prev_unlocked_balance != m_wallet.get_unlocked_balance()) {
         on_balances_changed(m_wallet.get_balance(), m_wallet.get_unlocked_balance());
         m_prev_balance = m_wallet.get_balance();
         m_prev_unlocked_balance = m_wallet.get_unlocked_balance();
-      }
-      if (m_prev_offshore_balance != m_wallet.get_offshore_balance() || m_prev_unlocked_offshore_balance != m_wallet.get_unlocked_offshore_balance()) {
-        on_offshore_balances_changed(m_wallet.get_offshore_balance(), m_wallet.get_unlocked_offshore_balance());
-        m_prev_offshore_balance = m_wallet.get_offshore_balance();
-        m_prev_unlocked_offshore_balance = m_wallet.get_unlocked_offshore_balance();
-    }
+      } */
       if (m_wallet.is_synced()) check_for_changed_unlocked_txs(); // check for newly unlocked outputs if synced
     }
 
-    void on_balances_changed(uint64_t new_balance, uint64_t new_unlocked_balance) {
+    void on_balances_changed(uint64_t new_balance, uint64_t new_unlocked_balance, std::string asset_type ) {
       if (m_wallet.get_listeners().empty()) return;
       for (monero_wallet_listener* listener : m_wallet.get_listeners()) {
-        listener->on_balances_changed(new_balance, new_unlocked_balance);
-      }
-    }
-
-       void on_offshore_balances_changed(uint64_t new_balance, uint64_t new_unlocked_balance) {
-      if (m_wallet.get_listeners().empty()) return;
-      for (monero_wallet_listener* listener : m_wallet.get_listeners()) {
-        listener->on_offshore_balances_changed(new_balance, new_unlocked_balance);
+        listener->on_balances_changed(new_balance, new_unlocked_balance, asset_type);
       }
     }
 
@@ -1392,58 +1381,38 @@ namespace monero {
 
   // isMultisigImportNeeded
 
-  uint64_t monero_wallet_core::get_balance() const {
+  std::map<std::string, uint64_t> monero_wallet_core::get_balance() const {
     return m_w2->balance_all(STRICT);
   }
 
-  uint64_t monero_wallet_core::get_balance(uint32_t account_idx) const {
+  std::map<uint32_t, std::map<std::string, uint64_t>> monero_wallet_core::get_balance(uint32_t account_idx) const {
     return m_w2->balance(account_idx, STRICT);
   }
 
-  uint64_t monero_wallet_core::get_balance(uint32_t account_idx, uint32_t subaddress_idx) const {
-    std::map<uint32_t, uint64_t> balance_per_subaddress = m_w2->balance_per_subaddress(account_idx, STRICT);
+   uint64_t monero_wallet_core::get_balance(const std::string& asset_type, uint32_t account_idx) const {
+    return m_w2->balance(asset_type, account_idx, STRICT);
+  }
+
+  uint64_t monero_wallet_core::get_balance(const std::string& asset_type, uint32_t account_idx, uint32_t subaddress_idx) const {
+    std::map<uint32_t, uint64_t> balance_per_subaddress = m_w2->balance_per_subaddress(asset_type, account_idx, STRICT);
     auto iter = balance_per_subaddress.find(subaddress_idx);
     return iter == balance_per_subaddress.end() ? 0 : iter->second;
   }
 
-  uint64_t monero_wallet_core::get_unlocked_balance() const {
+  std::map<std::string, uint64_t> monero_wallet_core::get_unlocked_balance() const {
     return m_w2->unlocked_balance_all(STRICT);
   }
 
-  uint64_t monero_wallet_core::get_unlocked_balance(uint32_t account_idx) const {
+   std::map<uint32_t, std::map<std::string, uint64_t>> monero_wallet_core::get_unlocked_balance(uint32_t account_idx) const {
     return m_w2->unlocked_balance(account_idx, STRICT);
   }
 
-  uint64_t monero_wallet_core::get_unlocked_balance(uint32_t account_idx, uint32_t subaddress_idx) const {
-    std::map<uint32_t, std::pair<uint64_t, std::pair<uint64_t, uint64_t>>> unlocked_balance_per_subaddress = m_w2->unlocked_balance_per_subaddress(account_idx, STRICT);
-    auto iter = unlocked_balance_per_subaddress.find(subaddress_idx);
-    return iter == unlocked_balance_per_subaddress.end() ? 0 : iter->second.first;
+    uint64_t monero_wallet_core::get_unlocked_balance(const std::string& asset_type, uint32_t account_idx) const {
+    return m_w2->unlocked_balance(asset_type, account_idx, STRICT);
   }
 
-   uint64_t monero_wallet_core::get_offshore_balance() const {
-    return m_w2->offshore_balance_all(STRICT);
-  }
-
-  uint64_t monero_wallet_core::get_offshore_balance(uint32_t account_idx) const {
-    return m_w2->offshore_balance(account_idx, STRICT);
-  }
-
-  uint64_t monero_wallet_core::get_offshore_balance(uint32_t account_idx, uint32_t subaddress_idx) const {
-    std::map<uint32_t, uint64_t> balance_per_subaddress = m_w2->offshore_balance_per_subaddress(account_idx, STRICT);
-    auto iter = balance_per_subaddress.find(subaddress_idx);
-    return iter == balance_per_subaddress.end() ? 0 : iter->second;
-  }
-
-  uint64_t monero_wallet_core::get_unlocked_offshore_balance() const {
-    return m_w2->unlocked_offshore_balance_all(STRICT);
-  }
-
-  uint64_t monero_wallet_core::get_unlocked_offshore_balance(uint32_t account_idx) const {
-    return m_w2->unlocked_offshore_balance(account_idx, STRICT);
-  }
-
-  uint64_t monero_wallet_core::get_unlocked_offshore_balance(uint32_t account_idx, uint32_t subaddress_idx) const {
-    std::map<uint32_t, std::pair<uint64_t, std::pair<uint64_t, uint64_t>>> unlocked_balance_per_subaddress = m_w2->unlocked_offshore_balance_per_subaddress(account_idx, STRICT);
+  uint64_t monero_wallet_core::get_unlocked_balance(const std::string& asset_type, uint32_t account_idx, uint32_t subaddress_idx) const {
+    std::map<uint32_t, std::pair<uint64_t, std::pair<uint64_t, uint64_t>>> unlocked_balance_per_subaddress = m_w2->unlocked_balance_per_subaddress(asset_type, account_idx, STRICT);
     auto iter = unlocked_balance_per_subaddress.find(subaddress_idx);
     return iter == unlocked_balance_per_subaddress.end() ? 0 : iter->second.first;
   }
@@ -1461,8 +1430,19 @@ namespace monero {
       monero_account account;
       account.m_index = account_idx;
       account.m_primary_address = get_address(account_idx, 0);
-      account.m_balance = m_w2->balance(account_idx, STRICT);
-      account.m_unlocked_balance = m_w2->unlocked_balance(account_idx, STRICT);
+
+      std::map<uint32_t, std::map<std::string, uint64_t>> balances = m_w2->balance(account_idx, STRICT);
+      std::map<uint32_t, std::map<std::string, uint64_t>> unlocked_balances = m_w2->unlocked_balance(account_idx, STRICT);
+      std::map<std::string, uint64_t> balance_total, unlocked_balance_total;
+
+      for (auto &balance : balances) {
+        for (auto &asset : balance.second) {
+          balance_total[asset.first] += asset.second;
+          unlocked_balance_total[asset.first] += unlocked_balances[balance.first][asset.first];
+        }
+      }
+      account.m_balance = balance_total;
+      account.m_unlocked_balance = unlocked_balance_total;
       if (include_subaddresses) account.m_subaddresses = get_subaddresses_aux(account_idx, std::vector<uint32_t>(), transfers);
       accounts.push_back(account);
     }
@@ -1481,8 +1461,21 @@ namespace monero {
     monero_account account;
     account.m_index = account_idx;
     account.m_primary_address = get_address(account_idx, 0);
-    account.m_balance = m_w2->balance(account_idx, STRICT);
-    account.m_unlocked_balance = m_w2->unlocked_balance(account_idx, STRICT);
+
+
+    std::map<uint32_t, std::map<std::string, uint64_t>> balances = m_w2->balance(account_idx, STRICT);
+    std::map<uint32_t, std::map<std::string, uint64_t>> unlocked_balances = m_w2->unlocked_balance(account_idx, STRICT);
+    std::map<std::string, uint64_t> balance_total, unlocked_balance_total;
+
+      for (auto &balance : balances) {
+        for (auto &asset : balance.second) {
+          balance_total[asset.first] += asset.second;
+          unlocked_balance_total[asset.first] += unlocked_balances[balance.first][asset.first];
+        }
+      }
+
+    account.m_balance = balance_total;
+    account.m_unlocked_balance = unlocked_balance_total;
     if (include_subaddresses) account.m_subaddresses = get_subaddresses_aux(account_idx, std::vector<uint32_t>(), transfers);
     return account;
   }
@@ -1497,8 +1490,6 @@ namespace monero {
     monero_account account;
     account.m_index = m_w2->get_num_subaddress_accounts() - 1;
     account.m_primary_address = m_w2->get_subaddress_as_str({account.m_index.get(), 0});
-    account.m_balance = 0;
-    account.m_unlocked_balance = 0;
     return account;
   }
 
@@ -1523,8 +1514,6 @@ namespace monero {
     subaddress.m_index = m_w2->get_num_subaddresses(account_idx) - 1;
     subaddress.m_address = m_w2->get_subaddress_as_str({account_idx, subaddress.m_index.get()});
     subaddress.m_label = label;
-    subaddress.m_balance = 0;
-    subaddress.m_unlocked_balance = 0;
     subaddress.m_num_unspent_outputs = 0;
     subaddress.m_is_used = false;
     subaddress.m_num_blocks_to_unlock = 0;
@@ -1942,8 +1931,9 @@ namespace monero {
 
   std::vector<std::shared_ptr<monero_tx_wallet>> monero_wallet_core::sweep_unlocked(const monero_tx_config& config) {
 
+//TODO implement for xAssets
     // validate config
-    std::vector<std::shared_ptr<monero_destination>> destinations = config.get_normalized_destinations();
+   /*  std::vector<std::shared_ptr<monero_destination>> destinations = config.get_normalized_destinations();
     if (destinations.size() != 1) throw std::runtime_error("Must specify exactly one destination to sweep to");
     if (destinations[0]->m_address == boost::none) throw std::runtime_error("Must specify destination address to sweep to");
     if (destinations[0]->m_amount != boost::none) throw std::runtime_error("Cannot specify amount to sweep");
@@ -1976,10 +1966,10 @@ namespace monero {
         }
       }
     }
-
+ */
     // sweep from each account and collect resulting txs
     std::vector<std::shared_ptr<monero_tx_wallet>> txs;
-    for (std::pair<uint32_t, std::vector<uint32_t>> subaddress_indices_pair : indices) {
+    /* for (std::pair<uint32_t, std::vector<uint32_t>> subaddress_indices_pair : indices) {
 
       // copy and modify the original config
       monero_tx_config copy = config.copy();
@@ -2003,7 +1993,7 @@ namespace monero {
           txs.insert(std::end(txs), std::begin(account_txs), std::end(account_txs));
         }
       }
-    }
+    } */
 
     // return sweep txs
     return txs;
@@ -2733,8 +2723,9 @@ namespace monero {
   std::shared_ptr<monero_check_tx> monero_wallet_core::check_tx_proof(const std::string& tx_hash, const std::string& address, const std::string& message, const std::string& signature) const {
     MTRACE("monero_wallet_core::check_tx_proof()");
 
+    //TODO implement for xAssets 
     // validate and parse tx hash
-    crypto::hash _tx_hash;
+   /*  crypto::hash _tx_hash;
     if (!epee::string_tools::hex_to_pod(tx_hash, _tx_hash)) {
       throw std::runtime_error("TX hash has invalid format");
     }
@@ -2743,11 +2734,11 @@ namespace monero {
     cryptonote::address_parse_info info;
     if (!get_account_address_from_str(info, m_w2->nettype(), address)) {
       throw std::runtime_error("Invalid address");
-    }
+    } */
 
     // initialize and return tx check using wallet2
     std::shared_ptr<monero_check_tx> check_tx = std::make_shared<monero_check_tx>();
-    uint64_t received_amount;
+ /*    uint64_t received_amount;
     uint64_t received_amount_usd;
     bool in_tx_pool;
     uint64_t num_confirmations;
@@ -2756,7 +2747,7 @@ namespace monero {
       check_tx->m_received_amount = received_amount;
       check_tx->m_in_tx_pool = in_tx_pool;
       check_tx->m_num_confirmations = num_confirmations;
-    }
+    } */
     return check_tx;
   }
 
@@ -3502,8 +3493,8 @@ namespace monero {
     std::vector<monero_subaddress> subaddresses;
 
     // get balances per subaddress as maps
-    std::map<uint32_t, uint64_t> balance_per_subaddress = m_w2->balance_per_subaddress(account_idx, STRICT);
-    std::map<uint32_t, std::pair<uint64_t, std::pair<uint64_t, uint64_t>>> unlocked_balance_per_subaddress = m_w2->unlocked_balance_per_subaddress(account_idx, STRICT);
+    std::map<uint32_t, std::map<std::string, uint64_t>> balance_per_subaddress = m_w2->balance(account_idx, STRICT);
+    std::map<uint32_t, std::map<std::string, uint64_t>> unlocked_balance_per_subaddress = m_w2->unlocked_balance(account_idx, STRICT);
 
     // get all indices if no indices given
     std::vector<uint32_t> subaddress_indices_req;
@@ -3524,13 +3515,15 @@ namespace monero {
       subaddress.m_address = get_address(account_idx, subaddress_idx);
       subaddress.m_label = m_w2->get_subaddress_label({account_idx, subaddress_idx});
       auto iter1 = balance_per_subaddress.find(subaddress_idx);
-      subaddress.m_balance = iter1 == balance_per_subaddress.end() ? 0 : iter1->second;
+      subaddress.m_balance = iter1 == balance_per_subaddress.end() ? std::map<std::string, uint64_t>() : iter1->second;
       auto iter2 = unlocked_balance_per_subaddress.find(subaddress_idx);
-      subaddress.m_unlocked_balance = iter2 == unlocked_balance_per_subaddress.end() ? 0 : iter2->second.first;
+      subaddress.m_unlocked_balance = iter2 == unlocked_balance_per_subaddress.end() ? std::map<std::string, uint64_t>() : iter2->second;
       cryptonote::subaddress_index index = {account_idx, subaddress_idx};
       subaddress.m_num_unspent_outputs = count_if(transfers.begin(), transfers.end(), [&](const tools::wallet2::transfer_details& td) { return !td.m_spent && td.m_subaddr_index == index; });
       subaddress.m_is_used = find_if(transfers.begin(), transfers.end(), [&](const tools::wallet2::transfer_details& td) { return td.m_subaddr_index == index; }) != transfers.end();
-      subaddress.m_num_blocks_to_unlock = iter1 == balance_per_subaddress.end() ? 0 : iter2->second.second.first;
+      //TODO adjust for xAssets
+      // subaddress.m_num_blocks_to_unlock = iter1 == balance_per_subaddress.end() ? 0 : iter2->second.second.first;
+      subaddress.m_num_blocks_to_unlock = 0;
       subaddresses.push_back(subaddress);
     }
 

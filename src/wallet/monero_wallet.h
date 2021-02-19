@@ -95,15 +95,7 @@ namespace monero {
      * @param new_balance - new balance
      * @param new_unlocked_balance - new unlocked balance
      */
-    virtual void on_balances_changed(uint64_t new_balance, uint64_t new_unlocked_balance) {};
-
-     /**
-     * Invoked when the wallet's offshore balances change.
-     *
-     * @param new_offshore_balance - new offshore balance
-     * @param new_unlocked_offshore_balance - new unlocked offshore balance
-     */
-    virtual void on_offshore_balances_changed(uint64_t new_offshore_balance, uint64_t new_unlocked_offshore_balance) {};
+    virtual void on_balances_changed(uint64_t new_balance, uint64_t new_unlocked_balance, const std::string& asset_type) {};
 
     /**
      * Invoked when the wallet receives an output.
@@ -510,59 +502,41 @@ namespace monero {
      *
      * @return the wallet's balance
      */
-    virtual uint64_t get_balance() const {
+    virtual std::map<std::string, uint64_t> get_balance() const {
       throw std::runtime_error("get_balance() not supported");
     }
 
-       /**
-     * Get the wallet's offshore balance.
-     *
-     * @return the wallet's offshore balance
-     */
-    virtual uint64_t get_offshore_balance() const {
-      throw std::runtime_error("get_offshore_balance() not supported");
-    }
-
     /**
-     * Get an account's balance.
+     * Get an account's balance of all asssets.
      *
      * @param account_idx is the index of the account to get the balance of
      * @return the account's balance
      */
-    virtual uint64_t get_balance(uint32_t account_idx) const {
+    virtual std::map<uint32_t, std::map<std::string, uint64_t>> get_balance(uint32_t account_idx) const {
       throw std::runtime_error("get_balance() not supported");
     }
 
-      /**
-     * Get an account's offshore balance.
+   /**
+     * Get an account's balance of an asset.
      *
-     * @param account_idx is the index of the account to get the offshore balance of
-     * @return the account's offshore balance
+     * @param asset_type is the requested asset type
+     * @param account_idx is the index of the account to get the balance of
+     * @return the account's balance
      */
-    virtual uint64_t get_offshore_balance(uint32_t account_idx) const {
+    virtual uint64_t get_balance(const std::string& asset_type, uint32_t account_idx) const {
       throw std::runtime_error("get_balance() not supported");
     }
 
     /**
      * Get a subaddress's balance.
      *
+     * @param asset_type is the requested asset type
      * @param account_idx is the index of the subaddress's account to get the balance of
      * @param subaddress_idx is the index of the subaddress to get the balance of
      * @return the subaddress's balance
      */
-    virtual uint64_t get_balance(uint32_t account_idx, uint32_t subaddress_idx) const {
+    virtual uint64_t get_balance(const std::string& asset_type, uint32_t account_idx, uint32_t subaddress_idx) const {
       throw std::runtime_error("get_balance() not supported");
-    }
-
-    /**
-     * Get a subaddress's offshore balance.
-     *
-     * @param account_idx is the index of the subaddress's account to get the balance of
-     * @param subaddress_idx is the index of the subaddress to get the balance of
-     * @return the subaddress's balance
-     */
-    virtual uint64_t get_offshore_balance(uint32_t account_idx, uint32_t subaddress_idx) const {
-      throw std::runtime_error("get_offshore_balance() not supported");
     }
 
     /**
@@ -570,59 +544,42 @@ namespace monero {
      *
      * @return the wallet's unlocked balance
      */
-    virtual uint64_t get_unlocked_balance() const {
+    virtual std::map<std::string, uint64_t> get_unlocked_balance() const {
       throw std::runtime_error("get_unlocked_balance() not supported");
     }
 
     /**
-     * Get the wallet's unlocked offshore balance.
-     *
-     * @return the wallet's unlocked offshore balance
-     */
-    virtual uint64_t get_unlocked_offshore_balance() const {
-      throw std::runtime_error("get_unlocked_balance() not supported");
-    }
-
-    /**
-     * Get an account's unlocked balance.
+     * Get an account's unlocked balance of all assets.
      *
      * @param account_idx is the index of the account to get the unlocked balance of
      * @return the account's unlocked balance
      */
-    virtual uint64_t get_unlocked_balance(uint32_t account_idx) const {
+    virtual std::map<uint32_t, std::map<std::string, uint64_t>> get_unlocked_balance(uint32_t account_idx) const {
       throw std::runtime_error("get_unlocked_balance() not supported");
     }
 
-    /**
-     * Get an account's unlocked offshore balance.
+        /**
+     * Get an account's unlocked balance of an asset.
      *
-     * @param account_idx is the index of the account to get the unlocked offshore balance of
-     * @return the account's unlocked offshore balance
+     * @param asset_type is the requested asset type
+     * @param account_idx is the index of the account to get the unlocked balance of
+     * @return the account's unlocked balance
      */
-    virtual uint64_t get_unlocked_offshore_balance(uint32_t account_idx) const {
-      throw std::runtime_error("get_unlocked_offshore_balance() not supported");
-    }  
+    virtual uint64_t get_unlocked_balance(const std::string& asset_type, uint32_t account_idx) const {
+      throw std::runtime_error("get_unlocked_balance() not supported");
+    }
+
 
     /**
      * Get a subaddress's unlocked balance.
      *
+     * @param asset_type is the requested asset type
      * @param account_idx is the index of the subaddress's account to get the unlocked balance of
      * @param subaddress_idx is the index of the subaddress to get the unlocked balance of
      * @return the subaddress's balance
      */
-    virtual uint64_t get_unlocked_balance(uint32_t account_idx, uint32_t subaddress_idx) const {
+    virtual uint64_t get_unlocked_balance(const std::string& asset_type, uint32_t account_idx, uint32_t subaddress_idx) const {
       throw std::runtime_error("get_unlocked_balance() not supported");
-    }
-
-    /**
-     * Get a subaddress's unlocked offshore balance.
-     *
-     * @param account_idx is the index of the subaddress's account to get the unlocked offshore balance of
-     * @param subaddress_idx is the index of the subaddress to get the unlocked offshore balance of
-     * @return the subaddress's offshore balance
-     */
-    virtual uint64_t get_unlocked_offshore_balance(uint32_t account_idx, uint32_t subaddress_idx) const {
-      throw std::runtime_error("get_unlocked_offshore_balance() not supported");
     }
 
     /**

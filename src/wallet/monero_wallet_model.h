@@ -82,8 +82,8 @@ namespace monero {
     boost::optional<uint32_t> m_index;
     boost::optional<std::string> m_address;
     boost::optional<std::string> m_label;
-    boost::optional<uint64_t> m_balance;
-    boost::optional<uint64_t> m_unlocked_balance;
+    boost::optional<std::map<std::string, uint64_t>> m_balance;
+    boost::optional<std::map<std::string, uint64_t>> m_unlocked_balance;
     boost::optional<uint64_t> m_num_unspent_outputs;
     boost::optional<bool> m_is_used;
     boost::optional<uint64_t> m_num_blocks_to_unlock;
@@ -97,8 +97,8 @@ namespace monero {
   struct monero_account : public serializable_struct {
     boost::optional<uint32_t> m_index;
     boost::optional<std::string> m_primary_address;
-    boost::optional<uint64_t> m_balance;
-    boost::optional<uint64_t> m_unlocked_balance;
+    boost::optional<std::map<std::string, uint64_t>> m_balance;
+    boost::optional<std::map<std::string, uint64_t>> m_unlocked_balance;
     boost::optional<std::string> m_tag;
     std::vector<monero_subaddress> m_subaddresses;
 

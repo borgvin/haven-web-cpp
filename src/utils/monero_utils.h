@@ -109,6 +109,7 @@ namespace monero_utils
   rapidjson::Value to_rapidjson_val(rapidjson::Document::AllocatorType& allocator, const std::vector<uint8_t>& nums);
   rapidjson::Value to_rapidjson_val(rapidjson::Document::AllocatorType& allocator, const std::vector<uint32_t>& nums);
   rapidjson::Value to_rapidjson_val(rapidjson::Document::AllocatorType& allocator, const std::vector<uint64_t>& nums);
+  rapidjson::Value to_rapidjson_val(rapidjson::Document::AllocatorType& allocator, const std::map<std::string, uint64_t>& map);
 
   // ------------------------ PROPERTY TREES ---------------------------
 
