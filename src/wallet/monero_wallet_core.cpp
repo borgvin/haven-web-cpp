@@ -804,7 +804,7 @@ namespace monero {
       } */
 
       // notify if balances changed
-      check_for_changed_funds();
+      check_for_changed_funds(asset_type);
 
       // free memory
 /*       monero_utils::free(block);
@@ -836,7 +836,7 @@ namespace monero {
       } */
 
       // notify if balances changed
-      check_for_changed_funds();
+      check_for_changed_funds(asset_type);
 
       // free memory
 /*       monero_utils::free(block);
@@ -880,17 +880,17 @@ namespace monero {
 
       } else {
 
-        for (const auto &asset_type : offshore::ASSET_TYPES) {
+        for (const auto &asset_type_in_list : offshore::ASSET_TYPES) {
 
-          auto iter1 = m_prev_balance.find(asset_type);
-          auto iter2 = m_current_balance.find(asset_type);
+          auto iter1 = m_prev_balance.find(asset_type_in_list);
+          auto iter2 = m_current_balance.find(asset_type_in_list);
 
-          auto iter3 = m_prev_unlocked_balance.find(asset_type);
-          auto iter4 = m_current_unlocked_balance.find(asset_type);
+          auto iter3 = m_prev_unlocked_balance.find(asset_type_in_list);
+          auto iter4 = m_current_unlocked_balance.find(asset_type_in_list);
 
           if (iter1->second != iter2->second || iter3->second != iter4->second) {
         
-            on_balances_changed(iter2->second, iter4->second, asset_type);
+            on_balances_changed(iter2->second, iter4->second, asset_type_in_list);
             m_prev_balance = m_wallet.get_balance();
             m_prev_unlocked_balance = m_wallet.get_unlocked_balance();
           }
