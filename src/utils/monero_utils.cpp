@@ -212,7 +212,7 @@ rapidjson::Value monero_utils::to_rapidjson_val(rapidjson::Document::AllocatorTy
   return value_arr;
 }
 
-  rapidjson::Value to_rapidjson_val(rapidjson::Document::AllocatorType& allocator, const std::map<std::string, uint64_t>& map) {
+  rapidjson::Value monero_utils::to_rapidjson_val(rapidjson::Document::AllocatorType& allocator, const std::map<std::string, uint64_t>& map) {
 
     rapidjson::Value value_obj(rapidjson::kObjectType);
     rapidjson::Value value_num(rapidjson::kNumberType);
