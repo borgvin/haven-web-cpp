@@ -16,7 +16,7 @@ set(BUILD_SCRATCHPAD ON)
 # monero-project
 ###################
 
-set(MONERO_CORE "${CMAKE_SOURCE_DIR}/external/haven-offshore/monero")
+set(MONERO_CORE "${CMAKE_SOURCE_DIR}/external/haven-main")
 set(MONERO_CORE_SRC "${MONERO_CORE}/src")
 
 # header includes
