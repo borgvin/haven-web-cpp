@@ -188,7 +188,9 @@ namespace monero {
     if (tx->m_payment_id == monero_tx::DEFAULT_PAYMENT_ID) tx->m_payment_id = boost::none;  // clear default payment id
     tx->m_unlock_height = pd.m_unlock_time;
     tx->m_is_locked = !m_w2.is_transfer_unlocked(pd.m_unlock_time, pd.m_block_height);
+    //TODO calc correct fee
    // tx->m_fee = pd.m_amount_in - pd.m_amount_out;
+    tx->m_fee = 0;
     tx->m_note = m_w2.get_tx_note(txid);
     if (tx->m_note->empty()) tx->m_note = boost::none; // clear empty note
     tx->m_is_miner_tx = false;
