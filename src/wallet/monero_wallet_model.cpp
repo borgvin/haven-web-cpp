@@ -1156,6 +1156,9 @@ namespace monero {
     if (m_note != boost::none) monero_utils::addJsonMember("note", m_note.get(), allocator, root, value_str);
     if (m_recipient_name != boost::none) monero_utils::addJsonMember("recipientName", m_recipient_name.get(), allocator, root, value_str);
     if (m_key_image != boost::none) monero_utils::addJsonMember("keyImage", m_key_image.get(), allocator, root, value_str);
+    if (m_source_currency != "") monero_utils::addJsonMember("sourceCurrency", m_source_currency, allocator, root, value_str);
+    if (m_destination_currency != "") monero_utils::addJsonMember("destinationCurrency", m_destination_currency, allocator, root, value_str);
+
 
     // set bool values
     if (m_can_split != boost::none) monero_utils::addJsonMember("canSplit", m_can_split.get(), allocator, root);
@@ -1189,6 +1192,8 @@ namespace monero {
           config->m_destinations.push_back(destination);
         }
       }
+      else if (key == std::string("sourceCurrency")) config->m_source_currency = it->second.data();
+      else if (key == std::string("destinationCurrency")) config->m_destination_currency = it->second.data();
       else if (key == std::string("paymentId")) config->m_payment_id = it->second.data();
       else if (key == std::string("priority")) {
         uint32_t priority_num = it->second.get_value<uint32_t>();
