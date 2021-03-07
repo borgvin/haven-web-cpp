@@ -1118,6 +1118,7 @@ namespace monero {
     m_payment_id = config.m_payment_id;
     m_priority = config.m_priority;
     m_tx_type = config.m_tx_type;
+    m_currency = config.m_currency;
     m_ring_size = config.m_ring_size;
     m_fee = config.m_fee;
     m_account_index = config.m_account_index;
@@ -1156,8 +1157,7 @@ namespace monero {
     if (m_note != boost::none) monero_utils::addJsonMember("note", m_note.get(), allocator, root, value_str);
     if (m_recipient_name != boost::none) monero_utils::addJsonMember("recipientName", m_recipient_name.get(), allocator, root, value_str);
     if (m_key_image != boost::none) monero_utils::addJsonMember("keyImage", m_key_image.get(), allocator, root, value_str);
-    if (m_source_currency != "") monero_utils::addJsonMember("sourceCurrency", m_source_currency, allocator, root, value_str);
-    if (m_destination_currency != "") monero_utils::addJsonMember("destinationCurrency", m_destination_currency, allocator, root, value_str);
+    if (m_currency != "") monero_utils::addJsonMember("currency", m_currency, allocator, root, value_str);
 
 
     // set bool values
@@ -1192,8 +1192,7 @@ namespace monero {
           config->m_destinations.push_back(destination);
         }
       }
-      else if (key == std::string("sourceCurrency")) config->m_source_currency = it->second.data();
-      else if (key == std::string("destinationCurrency")) config->m_destination_currency = it->second.data();
+      else if (key == std::string("currency")) config->m_currency = it->second.data();
       else if (key == std::string("paymentId")) config->m_payment_id = it->second.data();
       else if (key == std::string("priority")) {
         uint32_t priority_num = it->second.get_value<uint32_t>();
@@ -1205,10 +1204,9 @@ namespace monero {
       }
       else if (key == std::string("txType")) {
         uint32_t tx_type_num = it->second.get_value<uint32_t>();
-        if (tx_type_num == 0) config->m_tx_type = haven_tx_type::CLASSIC_TX;
-        else if (tx_type_num == 1) config->m_tx_type = haven_tx_type::ONSHORE_TX;
-        else if (tx_type_num == 2) config->m_tx_type = haven_tx_type::OFFSHORE_TX;
-        else if (tx_type_num == 3) config->m_tx_type = haven_tx_type::OFFSHORE_TO_OFFSHORE_TX;
+        if (tx_type_num == 0) config->m_tx_type = haven_tx_type::TRANSFER;
+        else if (tx_type_num == 1) config->m_tx_type = haven_tx_type::EXCHANGE_FROM_USD;
+        else if (tx_type_num == 2) config->m_tx_type = haven_tx_type::EXCHANGE_TO_USD;
         else throw std::runtime_error("Invalid tx_type number: " + std::to_string(tx_type_num));
       }
       else if (key == std::string("ringSize")) config->m_ring_size = it->second.get_value<uint32_t>();
