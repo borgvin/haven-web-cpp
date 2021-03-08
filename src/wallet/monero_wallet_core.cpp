@@ -617,16 +617,16 @@ namespace monero {
     return true;
   }
   //------------------------------------------------------------------------------------------------------------------------------
-   static uint64_t total_amount(const tools::wallet2::pending_tx &ptx, bool use_offshore_amounts)
+   static uint64_t total_amount(const tools::wallet2::pending_tx &ptx, bool use_offshore_amounts, bool use_xasset_amounts)
   {
     uint64_t amount = 0;
-    for (const auto &dest: ptx.dests) amount += (use_offshore_amounts ? dest.amount_usd : dest.amount);
+    for (const auto &dest: ptx.dests) amount += (use_offshore_amounts ? dest.amount_usd : use_xasset_amounts ? dest.amount_xasset : dest.amount);
     return amount;
   }
   //------------------------------------------------------------------------------------------------------------------------------
   template<typename Ts, typename Tu>
   bool fill_response(wallet2* m_w2, std::vector<tools::wallet2::pending_tx> &ptx_vector,
-      bool get_tx_key, Ts& tx_key, Tu &amount, Tu &amount_usd, Tu &fee, Tu &weight, std::string &multisig_txset, std::string &unsigned_txset, bool do_not_relay,
+      bool get_tx_key, Ts& tx_key, Tu &amount, Tu &amount_usd, Tu &amount_xasset, Tu &fee, Tu &weight, std::string &multisig_txset, std::string &unsigned_txset, bool do_not_relay,
       Ts &tx_hash, bool get_tx_hex, Ts &tx_blob, bool get_tx_metadata, Ts &tx_metadata, epee::json_rpc::error &er)
   {
     for (const auto & ptx : ptx_vector)
@@ -639,8 +639,9 @@ namespace monero {
         fill(tx_key, std::string(s.data(), s.size()));
       }
       // Compute amount leaving wallet in tx. By convention dests does not include change outputs
-      fill(amount, total_amount(ptx, false));
-      fill(amount_usd, total_amount(ptx, true));
+      fill(amount, total_amount(ptx, false, false));
+      fill(amount_usd, total_amount(ptx, true, false));
+      fill(amount_xasset, total_amount(ptx, false, true));
       fill(fee, ptx.fee);
       fill(weight, cryptonote::get_transaction_weight(ptx.tx));
     }
@@ -1785,6 +1786,9 @@ namespace monero {
 
     uint32_t tx_type = config.m_tx_type.get();
 
+    if (config.m_currency == boost::none) throw std::runtime_error("Must specify currency");
+    std::string currency = config.m_currency.get();
+
     // prepare parameters for wallet rpc's validate_transfer()
     std::string payment_id = config.m_payment_id == boost::none ? std::string("") : config.m_payment_id.get();
     std::list<tools::wallet_rpc::transfer_destination> tr_destinations;
@@ -1802,22 +1806,93 @@ namespace monero {
     std::vector<uint8_t> extra;
     epee::json_rpc::error err;
 
+
+    //validate currency
+    if (std::find(offshore::ASSET_TYPES.begin(), offshore::ASSET_TYPES.end(), currency) == offshore::ASSET_TYPES.end()) {
+          throw std::runtime_error("Invalid currency specified" + currency);
+    }
+
     // TODO adjusting prio for onshore/offshore leads to side effects and not needed
     // uint32_t priority = m_w2->adjust_priority(config.m_priority == boost::none ? 0 : config.m_priority.get());
 
     uint32_t priority = config.m_priority.get();
     uint64_t unlock_time = 0;
 
-      // check tx type and set extra data and unlock time accordingly
-    if (tx_type == OFFSHORE_TX || tx_type == ONSHORE_TX) {
+
+    cryptonote::tx_extra_offshore offshore_data;
+    //populate source and destination currency by client data ( tx_type + currency )
+    std::string strSource;
+    std::string strDest;
+
+    if (tx_type == TRANSFER) {
+
+      strSource = currency;
+      strDest = currency;
+
+    } else { 
+
+        if (currency == "XUSD") {
+          throw std::runtime_error( "cannot exchange xUSD to xUSD, please use transfer");
+        }
+        
+        if (tx_type == EXCHANGE_FROM_USD) {
+
+          strSource = "XUSD";
+          strDest = currency;
+
+        } else {
+
+          strSource = currency;
+          strDest = "XUSD";
+
+      }
+    }
 
 
+
+
+
+    // handle pre xAsset full version
+    if (!m_w2->use_fork_rules(HF_VERSION_XASSET_FULL, 0)) {
+
+      // we only allow XHV and XUSD related txs here
+      if(currency != "XHV" && currency != "XUSD") {
+
+          throw std::runtime_error( "currency not allowed yet");
+
+      }
+      else {
+
+            // Support old format of offshore_data
+          if (strSource == "XHV")
+            offshore_data.data += 'A';
+          else 
+            offshore_data.data += 'N';
+          if (strDest == "XHV")
+            offshore_data.data += 'A';
+          else 
+            offshore_data.data += 'N';
+        }
+
+      }
+      // handle full xassets version
+      else {
+
+        offshore_data.data = strSource + "-" + strDest;
+
+      }
+
+       cryptonote::add_offshore_to_tx_extra(extra, offshore_data);
+
+
+    // adjust unlock time for offshore/onshore tx
+    if (tx_type == EXCHANGE_FROM_USD || tx_type == EXCHANGE_TO_USD && currency == "XHV") {
       //increment priority -> for onshore/offhore we use a priority range from 1-4, but for default 0-3
       //therefore we increment here when its onshore/offshore 
       priority++;
 
         // set unlock time
-      if (m_w2->use_fork_rules(HF_VERSION_OFFSHORE_FEES_V3, 0))
+      if (0/*m_w2->use_fork_rules(HF_VERSION_OFFSHORE_FEES_V3, 0)*/)
       {
         unlock_time = ((priority == 4) ? 180 : (priority == 3) ? 1440 : (priority == 2) ? 3600 : 7200) + m_w2->get_blockchain_current_height();
       }
@@ -1829,29 +1904,15 @@ namespace monero {
       {
         unlock_time = 60 * pow(3, std::max((uint32_t)0, 4 - priority)) + m_w2->get_blockchain_current_height();
       }
-      if (tx_type == OFFSHORE_TX) {
-        // Populate the txextra to signify that this is an offshore tx
-        cryptonote::tx_extra_offshore offshore_data;
-        offshore_data.data = std::string("AN");
-        cryptonote::add_offshore_to_tx_extra(extra, offshore_data);
-      
-      } 
-      // else we have an onshore tx
-      else {
-
-        // Populate the txextra to signify that this is an offshore tx
-        cryptonote::tx_extra_offshore offshore_data;
-        offshore_data.data = std::string("NA");
-        cryptonote::add_offshore_to_tx_extra(extra, offshore_data);
-      }
     }
 
-    if (tx_type == OFFSHORE_TO_OFFSHORE_TX) {
+    //adjust priority for xassets transfers
+    if (tx_type == TRANSFER && currency != "XHV" && currency != "XUSD") {
 
-          // Populate the txextra to signify that this is an offshore tx
-        cryptonote::tx_extra_offshore offshore_data;
-        offshore_data.data = std::string("NN");
-        cryptonote::add_offshore_to_tx_extra(extra, offshore_data);
+      //Reducing priority to 1 - xAsset transfers do not permit other priorities
+      if (priority > 1) {
+        priority = 1;
+      }
 
     }
 
@@ -1888,6 +1949,7 @@ namespace monero {
     std::list<std::string> tx_keys;
     std::list<uint64_t> tx_amounts;
     std::list<uint64_t> tx_amounts_usd;
+    std::list<uint64_t> tx_amounts_xasset;
     std::list<uint64_t> tx_fees;
     std::list<uint64_t> tx_weights;
     std::string multisig_tx_hex;
@@ -1895,7 +1957,7 @@ namespace monero {
     std::list<std::string> tx_hashes;
     std::list<std::string> tx_blobs;
     std::list<std::string> tx_metadatas;
-    if (!fill_response(m_w2.get(), ptx_vector, get_tx_keys, tx_keys, tx_amounts, tx_amounts_usd, tx_fees, tx_weights, multisig_tx_hex, unsigned_tx_hex, !relay, tx_hashes, get_tx_hex, tx_blobs, get_tx_metadata, tx_metadatas, err)) {
+    if (!fill_response(m_w2.get(), ptx_vector, get_tx_keys, tx_keys, tx_amounts, tx_amounts_usd, tx_amounts_xasset, tx_fees, tx_weights, multisig_tx_hex, unsigned_tx_hex, !relay, tx_hashes, get_tx_hex, tx_blobs, get_tx_metadata, tx_metadatas, err)) {
       throw std::runtime_error("need to handle error filling response!");  // TODO
     }
 
@@ -1905,6 +1967,7 @@ namespace monero {
     auto tx_keys_iter = tx_keys.begin();
     auto tx_amounts_iter = tx_amounts.begin();
     auto tx_amounts_usd_iter = tx_amounts_usd.begin();
+    auto tx_amounts_xasset_iter = tx_amounts_xasset.begin();
     auto tx_fees_iter = tx_fees.begin();
     auto tx_weights_iter = tx_weights.begin();
     auto tx_blobs_iter = tx_blobs.begin();
@@ -1922,18 +1985,18 @@ namespace monero {
       tx->m_metadata = *tx_metadatas_iter;
       std::shared_ptr<monero_outgoing_transfer> out_transfer = std::make_shared<monero_outgoing_transfer>();
       tx->m_outgoing_transfer = out_transfer;
-      out_transfer->m_amount = (tx_type == OFFSHORE_TX || tx_type == CLASSIC_TX) ? *tx_amounts_iter : *tx_amounts_usd_iter;
-      out_transfer->m_currency = (tx_type == OFFSHORE_TX || tx_type == CLASSIC_TX) ? "XHV" : "xUSD"; 
+      out_transfer->m_amount = (strSource == "XHV")? *tx_amounts_iter : (strSource == "XUSD")?  *tx_amounts_usd_iter : *tx_amounts_xasset_iter;
+      out_transfer->m_currency = strSource; 
 
-      // for onshores/offshores create incoming tx ( even if not send to yourself, to extract counter value later)
-      if (tx_type == OFFSHORE_TX || tx_type == ONSHORE_TX) {
+      // for oexchanges create incoming tx ( even if not send to yourself, to extract counter value later)
+      if (tx_type == EXCHANGE_FROM_USD || tx_type == EXCHANGE_TO_USD) {
 
 
         std::shared_ptr<monero_incoming_transfer> incoming_transfer = std::make_shared<monero_incoming_transfer>();
         incoming_transfer->m_tx = tx;
         tx->m_incoming_transfers.push_back(incoming_transfer);
-        incoming_transfer->m_amount = (tx_type == OFFSHORE_TX) ? *tx_amounts_usd_iter : *tx_amounts_iter;
-        incoming_transfer->m_currency = (tx_type == OFFSHORE_TX) ? "xUSD" : "XHV"; 
+        incoming_transfer->m_amount = (tx_type == EXCHANGE_TO_USD) ? *tx_amounts_usd_iter : (strDest == "XHV") ? *tx_amounts_iter : *tx_amounts_xasset_iter;
+        incoming_transfer->m_currency = strDest;
 
       }
 
@@ -1960,6 +2023,8 @@ namespace monero {
       // iterate to next element
       tx_keys_iter++;
       tx_amounts_iter++;
+      tx_amounts_usd_iter++;
+      tx_amounts_xasset_iter++;
       tx_fees_iter++;
       tx_hashes_iter++;
       tx_blobs_iter++;
@@ -2110,6 +2175,7 @@ namespace monero {
     std::list<std::string> tx_keys;
     std::list<uint64_t> tx_amounts;
     std::list<uint64_t> tx_amounts_usd;
+    std::list<uint64_t> tx_amounts_xasset;
     std::list<uint64_t> tx_fees;
     std::list<uint64_t> tx_weights;
     std::string multisig_tx_hex;
@@ -2117,7 +2183,7 @@ namespace monero {
     std::list<std::string> tx_hashes;
     std::list<std::string> tx_blobs;
     std::list<std::string> tx_metadatas;
-    if (!fill_response(m_w2.get(), ptx_vector, get_tx_keys, tx_keys, tx_amounts, tx_amounts_usd, tx_fees, tx_weights, multisig_tx_hex, unsigned_tx_hex, !relay, tx_hashes, get_tx_hex, tx_blobs, get_tx_metadata, tx_metadatas, err)) {
+    if (!fill_response(m_w2.get(), ptx_vector, get_tx_keys, tx_keys, tx_amounts, tx_amounts_usd, tx_amounts_xasset, tx_fees, tx_weights, multisig_tx_hex, unsigned_tx_hex, !relay, tx_hashes, get_tx_hex, tx_blobs, get_tx_metadata, tx_metadatas, err)) {
       throw std::runtime_error("need to handle error filling response!");  // TODO
     }
 
@@ -2236,6 +2302,7 @@ namespace monero {
     std::list<std::string> tx_keys;
     std::list<uint64_t> tx_amounts;
     std::list<uint64_t> tx_amounts_usd;
+    std::list<uint64_t> tx_amounts_xasset;
     std::list<uint64_t> tx_fees;
     std::list<uint64_t> tx_weights;
     std::string multisig_tx_hex;
@@ -2243,7 +2310,7 @@ namespace monero {
     std::list<std::string> tx_hashes;
     std::list<std::string> tx_blobs;
     std::list<std::string> tx_metadatas;
-    if (!fill_response(m_w2.get(), ptx_vector, get_tx_keys, tx_keys, tx_amounts, tx_amounts_usd, tx_fees, tx_weights, multisig_tx_hex, unsigned_tx_hex, !relay, tx_hashes, get_tx_hex, tx_blobs, get_tx_metadata, tx_metadatas, err)) {
+    if (!fill_response(m_w2.get(), ptx_vector, get_tx_keys, tx_keys, tx_amounts, tx_amounts_usd,tx_amounts_xasset, tx_fees, tx_weights, multisig_tx_hex, unsigned_tx_hex, !relay, tx_hashes, get_tx_hex, tx_blobs, get_tx_metadata, tx_metadatas, err)) {
       throw std::runtime_error("need to handle error filling response!");  // TODO: return err message
     }
 
@@ -2327,6 +2394,7 @@ namespace monero {
     std::list<std::string> tx_keys;
     std::list<uint64_t> tx_amounts;
     std::list<uint64_t> tx_amounts_usd;
+    std::list<uint64_t> tx_amounts_xasset;
     std::list<uint64_t> tx_fees;
     std::list<uint64_t> tx_weights;
     std::string multisig_tx_hex;
@@ -2335,7 +2403,7 @@ namespace monero {
     std::list<std::string> tx_blobs;
     std::list<std::string> tx_metadatas;
     epee::json_rpc::error er;
-    if (!fill_response(m_w2.get(), ptx_vector, get_tx_keys, tx_keys, tx_amounts, tx_amounts_usd, tx_fees, tx_weights, multisig_tx_hex, unsigned_tx_hex, !relay, tx_hashes, get_tx_hex, tx_blobs, get_tx_metadata, tx_metadatas, er)) {
+    if (!fill_response(m_w2.get(), ptx_vector, get_tx_keys, tx_keys, tx_amounts, tx_amounts_usd, tx_amounts_xasset, tx_fees, tx_weights, multisig_tx_hex, unsigned_tx_hex, !relay, tx_hashes, get_tx_hex, tx_blobs, get_tx_metadata, tx_metadatas, er)) {
       throw std::runtime_error("need to handle error filling response!");  // TODO: return err message
     }
 
