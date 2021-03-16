@@ -2153,7 +2153,7 @@ namespace monero {
        // handle pre xAsset full version
     if (!m_w2->use_fork_rules(HF_VERSION_XASSET_FULL, 0)) {
 
-      // we only allow XHV and XUSD related txs here
+      // we only allow XUSD related txs here
       if(currency != "XUSD") {
 
           throw std::runtime_error( "currency not allowed yet");
@@ -2841,9 +2841,11 @@ namespace monero {
     // initialize and return tx check using wallet2
     uint64_t received_amount;
     uint64_t received_amount_usd;
+    // TODO implement new response type for check tx key
+    std::map<std::string, uint64_t> placeHolder;
     bool in_tx_pool;
     uint64_t num_confirmations;
-    m_w2->check_tx_key(_tx_hash, _tx_key, additional_tx_keys, info.address, received_amount,received_amount_usd, in_tx_pool, num_confirmations);
+    m_w2->check_tx_key(_tx_hash, _tx_key, additional_tx_keys, info.address, placeHolder, in_tx_pool, num_confirmations);
     std::shared_ptr<monero_check_tx> check_tx = std::make_shared<monero_check_tx>();
     check_tx->m_is_good = true; // check is good if we get this far
     check_tx->m_received_amount = received_amount;
