@@ -1885,7 +1885,7 @@ namespace monero {
 
 
     // adjust unlock time for offshore/onshore tx
-    if (tx_type == EXCHANGE_FROM_USD || tx_type == EXCHANGE_TO_USD && currency == "XHV") {
+    if ((tx_type == EXCHANGE_FROM_USD || tx_type == EXCHANGE_TO_USD) && currency == "XHV") {
       //increment priority -> for onshore/offhore we use a priority range from 1-4, but for default 0-3
       //therefore we increment here when its onshore/offshore 
       priority++;
