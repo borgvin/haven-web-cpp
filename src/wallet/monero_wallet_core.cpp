@@ -1823,6 +1823,9 @@ namespace monero {
     std::string strSource;
     std::string strDest;
 
+    // don't add extra data when normal transfer via xhv
+    if (!(currency == "XHV" && tx_type == TRANSFER)) {
+
     if (tx_type == TRANSFER) {
 
       strSource = currency;
@@ -1882,6 +1885,8 @@ namespace monero {
       }
 
        cryptonote::add_offshore_to_tx_extra(extra, offshore_data);
+
+    }
 
 
     // adjust unlock time for offshore/onshore tx
@@ -2197,7 +2202,7 @@ namespace monero {
     for (const uint32_t& subaddress_idx : config.m_subaddress_indices) subaddress_indices.insert(subaddress_idx);
 
     // prepare transactions
-    std::vector<wallet2::pending_tx> ptx_vector = m_w2->create_transactions_all(below_amount, dsts[0].addr, dsts[0].is_subaddress, num_outputs, mixin, unlock_height, priority, extra, account_index, subaddress_indices);
+    std::vector<wallet2::pending_tx> ptx_vector = m_w2->create_transactions_all(below_amount, dsts[0].addr, dsts[0].is_subaddress, num_outputs, mixin, unlock_height, priority, extra, account_index, subaddress_indices, currency);
     // config for fill_response()
     bool get_tx_keys = true;
     bool get_tx_hex = true;
