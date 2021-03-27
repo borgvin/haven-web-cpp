@@ -1823,7 +1823,7 @@ namespace monero {
     std::string strSource;
     std::string strDest;
 
-    // don't add extra data when normal transfer via xhv
+    // don't add extra data and special unlock times when normal transfer via xhv
     if (!(currency == "XHV" && tx_type == TRANSFER)) {
 
     if (tx_type == TRANSFER) {
@@ -1850,10 +1850,6 @@ namespace monero {
       }
     }
 
-
-
-
-
     // handle pre xAsset full version
     if (!m_w2->use_fork_rules(HF_VERSION_XASSET_FULL, 0)) {
 
@@ -1875,50 +1871,50 @@ namespace monero {
           else 
             offshore_data.data += 'N';
         }
-
       }
       // handle full xassets version
       else {
-
         offshore_data.data = strSource + "-" + strDest;
-
       }
-
        cryptonote::add_offshore_to_tx_extra(extra, offshore_data);
 
-    }
-
-
+       std::string err;
     // adjust unlock time for offshore/onshore tx
-    if ((tx_type == EXCHANGE_FROM_USD || tx_type == EXCHANGE_TO_USD) && currency == "XHV") {
+    if (tx_type != TRANSFER && currency == "XHV") {
       //increment priority -> for onshore/offhore we use a priority range from 1-4, but for default 0-3
       //therefore we increment here when its onshore/offshore 
-      priority++;
+        priority++;
 
-        // set unlock time
-      if (0/*m_w2->use_fork_rules(HF_VERSION_OFFSHORE_FEES_V3, 0)*/)
-      {
-        unlock_time = ((priority == 4) ? 180 : (priority == 3) ? 1440 : (priority == 2) ? 3600 : 7200) + m_w2->get_blockchain_current_height();
+          // set unlock time
+        if (0/*m_w2->use_fork_rules(HF_VERSION_OFFSHORE_FEES_V3, 0)*/)
+        {
+          unlock_time = ((priority == 4) ? 180 : (priority == 3) ? 1440 : (priority == 2) ? 3600 : 7200) + m_w2->get_daemon_blockchain_height(err);
+        }
+        else if (m_w2->use_fork_rules(HF_VERSION_OFFSHORE_FEES_V2, 0))
+        {
+          unlock_time = ((priority == 4) ? 180 : (priority == 3) ? 720 : (priority == 2) ? 1440 : 5040) + m_w2->get_daemon_blockchain_height(err);
+        }
+        else
+        {
+          unlock_time = 60 * pow(3, std::max((uint32_t)0, 4 - priority)) + m_w2->get_daemon_blockchain_height(err);
+        }
+      } else {
+
+            unlock_time = 10 + m_w2->get_daemon_blockchain_height(err);
       }
-      else if (m_w2->use_fork_rules(HF_VERSION_OFFSHORE_FEES_V2, 0))
-      {
-        unlock_time = ((priority == 4) ? 180 : (priority == 3) ? 720 : (priority == 2) ? 1440 : 5040) + m_w2->get_blockchain_current_height();
-      }
-      else
-      {
-        unlock_time = 60 * pow(3, std::max((uint32_t)0, 4 - priority)) + m_w2->get_blockchain_current_height();
-      }
+      //adjust priority for xassets transfers
+      if (tx_type == TRANSFER && currency != "XHV" && currency != "XUSD") {
+
+        //Reducing priority to 1 - xAsset transfers do not permit other priorities
+        if (priority > 1) {
+          priority = 1;
+        }
+        }
+
     }
 
-    //adjust priority for xassets transfers
-    if (tx_type == TRANSFER && currency != "XHV" && currency != "XUSD") {
 
-      //Reducing priority to 1 - xAsset transfers do not permit other priorities
-      if (priority > 1) {
-        priority = 1;
-      }
 
-    }
 
 
     if (!validate_transfer(m_w2.get(), tr_destinations, payment_id, dsts, extra, true, err)) {
@@ -2017,7 +2013,7 @@ namespace monero {
       if (!tx->m_is_failed.get() && tx->m_is_relayed.get()) tx->m_is_double_spend_seen = false;  // TODO: test and handle if true
       tx->m_num_confirmations = 0;
       tx->m_ring_size = monero_utils::RING_SIZE;
-      tx->m_unlock_height = config.m_unlock_height == boost::none ? 0 : config.m_unlock_height.get();
+      tx->m_unlock_height = unlock_time;
       tx->m_is_locked = true;
       if (tx->m_is_relayed.get()) tx->m_last_relayed_timestamp = static_cast<uint64_t>(time(NULL));  // std::set last relayed timestamp to current time iff relayed  // TODO monero core: this should be encapsulated in wallet2
       out_transfer->m_account_index = config.m_account_index;
