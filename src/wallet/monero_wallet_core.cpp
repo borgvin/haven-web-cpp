@@ -1818,7 +1818,7 @@ namespace monero {
     uint64_t unlock_time = 0;
 
 
-    cryptonote::tx_extra_offshore offshore_data;
+    std::string offshore_data;
     //populate source and destination currency by client data ( tx_type + currency )
     std::string strSource;
     std::string strDest;
@@ -1863,18 +1863,18 @@ namespace monero {
 
             // Support old format of offshore_data
           if (strSource == "XHV")
-            offshore_data.data += 'A';
+            offshore_data += 'A';
           else 
-            offshore_data.data += 'N';
+            offshore_data += 'N';
           if (strDest == "XHV")
-            offshore_data.data += 'A';
+            offshore_data += 'A';
           else 
-            offshore_data.data += 'N';
+            offshore_data += 'N';
         }
       }
       // handle full xassets version
       else {
-        offshore_data.data = strSource + "-" + strDest;
+        offshore_data = strSource + "-" + strDest;
       }
        cryptonote::add_offshore_to_tx_extra(extra, offshore_data);
 
@@ -1909,7 +1909,7 @@ namespace monero {
         if (priority > 1) {
           priority = 1;
         }
-        }
+      }
 
     }
 
@@ -2144,7 +2144,7 @@ namespace monero {
 
 
 
-    cryptonote::tx_extra_offshore offshore_data;
+    std::string offshore_data;
 
 
     //handle non XHV sweeps
@@ -2163,13 +2163,13 @@ namespace monero {
       else {
 
           // Support old format of offshore_data
-           offshore_data.data = "NN";
+           offshore_data = "NN";
       }
     }
       // handle full xassets version
       else {
 
-        offshore_data.data = currency + "-" + currency;
+        offshore_data = currency + "-" + currency;
 
       }
       cryptonote::add_offshore_to_tx_extra(extra, offshore_data);
