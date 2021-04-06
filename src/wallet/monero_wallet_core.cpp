@@ -1820,7 +1820,7 @@ namespace monero {
 
     std::string offshore_data;
     //populate source and destination currency by client data ( tx_type + currency )
-    std::string strSource;
+    std::string strSource = currency;
     std::string strDest;
 
     // don't add extra data and special unlock times when normal transfer via xhv
