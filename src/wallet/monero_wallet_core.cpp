@@ -862,6 +862,7 @@ namespace monero {
 
     std::map<std::string, uint64_t> m_current_balance = m_wallet.get_balance();
     std::map<std::string, uint64_t> m_current_unlocked_balance = m_wallet.get_unlocked_balance();
+    bool balance_changed = false;
 
     if (asset_type != boost::none) {
 
@@ -874,13 +875,11 @@ namespace monero {
       if (iter1->second != iter2->second || iter3->second != iter4->second) {
         
         on_balances_changed(iter2->second, iter4->second, asset_type.get());
+        balance_changed = true;
 
         m_prev_balance = m_wallet.get_balance();
         m_prev_unlocked_balance = m_wallet.get_unlocked_balance();
       }
-
-
-
       } else {
 
         for (const auto &asset_type_in_list : offshore::ASSET_TYPES) {
@@ -894,11 +893,17 @@ namespace monero {
           if (iter1->second != iter2->second || iter3->second != iter4->second) {
         
             on_balances_changed(iter2->second, iter4->second, asset_type_in_list);
-            m_prev_balance = m_wallet.get_balance();
-            m_prev_unlocked_balance = m_wallet.get_unlocked_balance();
+            balance_changed = true;
           }
         }
+
       }
+
+
+        if (balance_changed) {
+          m_prev_balance = m_wallet.get_balance();
+          m_prev_unlocked_balance = m_wallet.get_unlocked_balance();
+        }
 
 
      
