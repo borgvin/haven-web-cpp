@@ -876,9 +876,6 @@ namespace monero {
         
         on_balances_changed(iter2->second, iter4->second, asset_type.get());
         balance_changed = true;
-
-        m_prev_balance = m_wallet.get_balance();
-        m_prev_unlocked_balance = m_wallet.get_unlocked_balance();
       }
       } else {
 
@@ -899,13 +896,10 @@ namespace monero {
 
       }
 
-
         if (balance_changed) {
           m_prev_balance = m_wallet.get_balance();
           m_prev_unlocked_balance = m_wallet.get_unlocked_balance();
         }
-
-
      
   /*     if (m_prev_balance != m_wallet.get_balance() || m_prev_unlocked_balance != m_wallet.get_unlocked_balance()) {
         on_balances_changed(m_wallet.get_balance(), m_wallet.get_unlocked_balance());
