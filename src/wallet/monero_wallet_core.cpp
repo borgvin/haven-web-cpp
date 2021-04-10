@@ -1855,7 +1855,7 @@ namespace monero {
       // we only allow XHV and XUSD related txs here
       if(currency != "XHV" && currency != "XUSD") {
 
-          throw std::runtime_error( "currency not allowed yet");
+          throw std::runtime_error( "This asset has not been enabled");
 
       }
       else {
