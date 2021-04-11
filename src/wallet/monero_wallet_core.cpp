@@ -190,7 +190,7 @@ namespace monero {
     tx->m_is_locked = !m_w2.is_transfer_unlocked(pd.m_unlock_time, pd.m_block_height);
     //TODO calc correct fee
    // tx->m_fee = pd.m_amount_in - pd.m_amount_out;
-    tx->m_fee = 0;
+    tx->m_fee = pd.m_fee;
     tx->m_note = m_w2.get_tx_note(txid);
     if (tx->m_note->empty()) tx->m_note = boost::none; // clear empty note
     tx->m_is_miner_tx = false;
@@ -300,7 +300,7 @@ namespace monero {
     tx->m_is_locked = true;
     // TODO how is new fee calculated
     // tx->m_fee = pd.m_amount_in - pd.m_amount_out;
-    tx->m_fee = 0;
+    tx->m_fee = pd.m_fee;
     tx->m_note = m_w2.get_tx_note(txid);
     if (tx->m_note->empty()) tx->m_note = boost::none; // clear empty note
     tx->m_is_miner_tx = false;
