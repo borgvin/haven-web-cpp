@@ -1897,13 +1897,9 @@ namespace monero {
         {
           unlock_time = 60 * pow(3, std::max((uint32_t)0, 4 - priority)) + m_w2->get_daemon_blockchain_height(err);
         }
-      } else if (tx_type == TRANSFER){
+      } else {
             unlock_time = 10 + m_w2->get_daemon_blockchain_height(err);
       } 
-      // temp fix for xassets conversion
-      else {
-           unlock_time = 180 + m_w2->get_daemon_blockchain_height(err);
-      }
 
       //adjust priority for xassets transfers
       if (tx_type == TRANSFER && currency != "XHV" && currency != "XUSD") {
