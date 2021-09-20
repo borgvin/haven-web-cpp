@@ -1789,7 +1789,7 @@ namespace monero {
 
     // validate tx_type
     if (config.m_tx_type == boost::none) throw std::runtime_error("Must specify tx type");
-    uint32_t tx_type = config.m_tx_type.get();
+    uint32_t client_tx_type = config.m_tx_type.get();
 
     if (config.m_currency == boost::none) throw std::runtime_error("Must specify currency");
     std::string currency = config.m_currency.get();
@@ -1823,19 +1823,19 @@ namespace monero {
     uint32_t priority = config.m_priority.get();
     uint64_t unlock_time = 0;
 
-
-    std::string offshore_data;
     //populate source and destination currency by client data ( tx_type + currency )
     std::string strSource = currency;
     std::string strDest;
+    //derivate havens tx type from source asset and web cores tx_type
+    using t_type = cryptonote::transaction_type;
+    t_type tx_type;
+    
 
-    // don't add extra data and special unlock times when normal transfer via xhv
-    if (!(currency == "XHV" && tx_type == TRANSFER)) {
-
-    if (tx_type == TRANSFER) {
+    if (client_tx_type == TRANSFER) {
 
       strSource = currency;
       strDest = currency;
+      tx_type = str_source == "XHV" ? t_type::TRANSFER: str_source == "XUSD" ? t_type::OFFSHORE_TRANSFER : t_type::XASSET_TRANSFER;
 
     } else { 
 
@@ -1843,50 +1843,23 @@ namespace monero {
           throw std::runtime_error( "cannot exchange xUSD to xUSD, please use transfer");
         }
         
-        if (tx_type == EXCHANGE_FROM_USD) {
+        if (client_tx_type == EXCHANGE_FROM_USD) {
 
           strSource = "XUSD";
           strDest = currency;
+          tx_type = currency == "XHV" ? t_type::ONSHORE: t_type::XUSD_TO_XASSET;
 
         } else {
 
           strSource = currency;
           strDest = "XUSD";
-
+          tx_type = currency == "XHV" ? t_type::OFFSHORE: t_type::XASSET_TO_XUSD;
       }
-    }
 
-    // handle pre xAsset full version
-    if (!m_w2->use_fork_rules(HF_VERSION_XASSET_FULL, 0)) {
-
-      // we only allow XHV and XUSD related txs here
-      if(currency != "XHV" && currency != "XUSD") {
-
-          throw std::runtime_error( "This asset has not been enabled");
-
-      }
-      else {
-
-            // Support old format of offshore_data
-          if (strSource == "XHV")
-            offshore_data += 'A';
-          else 
-            offshore_data += 'N';
-          if (strDest == "XHV")
-            offshore_data += 'A';
-          else 
-            offshore_data += 'N';
-        }
-      }
-      // handle full xassets version
-      else {
-        offshore_data = strSource + "-" + strDest;
-      }
-       cryptonote::add_offshore_to_tx_extra(extra, offshore_data);
 
        std::string err;
     // adjust unlock time for offshore/onshore tx
-    if (tx_type != TRANSFER && currency == "XHV") {
+    if (client_tx_type != TRANSFER && currency == "XHV") {
       //increment priority -> for onshore/offhore we use a priority range from 1-4, but for default 0-3
       //therefore we increment here when its onshore/offshore 
         priority++;
@@ -1907,7 +1880,7 @@ namespace monero {
       } 
       else {
             //xassets conversions
-          if (tx_type != TRANSFER) 
+          if (client_tx_type != TRANSFER) 
           {
               unlock_time = 1440 + m_w2->get_daemon_blockchain_height(err);
           } 
@@ -1917,15 +1890,6 @@ namespace monero {
             unlock_time = 10 + m_w2->get_daemon_blockchain_height(err);
           }
       } 
-
-      //adjust priority for xassets transfers
-      if (tx_type == TRANSFER && currency != "XHV" && currency != "XUSD") {
-
-        //Reducing priority to 1 - xAsset transfers do not permit other priorities
-        if (priority > 1) {
-          priority = 1;
-        }
-      }
 
     }
 
@@ -1946,7 +1910,7 @@ namespace monero {
 
   
     // prepare transactions
-    std::vector<wallet2::pending_tx> ptx_vector = m_w2->create_transactions_2(dsts, mixin, unlock_time, priority, extra, account_index, subaddress_indices);
+    std::vector<wallet2::pending_tx> ptx_vector = m_w2->create_transactions_2(dsts, mixin, str_source, str_dest, tx_type, unlock_time, priority, extra, account_index, subaddress_indices);
     if (ptx_vector.empty()) throw std::runtime_error("No transaction created");
 
     // check if request cannot be fulfilled due to splitting
