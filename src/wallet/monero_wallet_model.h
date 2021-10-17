@@ -340,22 +340,14 @@ namespace monero {
   };
 
   /**
-   * Enumerates Haven Tx Types.
-   */
-  enum haven_tx_type : uint8_t {
-    TRANSFER=0,
-    EXCHANGE_FROM_USD,
-    EXCHANGE_TO_USD,
-  };
-
-  /**
    * Configures a transaction to send, sweep, or create a payment URI.
    */
   struct monero_tx_config : public serializable_struct {
     boost::optional<std::string> m_address;
     boost::optional<uint64_t> m_amount;
     std::vector<std::shared_ptr<monero_destination>> m_destinations;
-    boost::optional<std::string> m_currency;
+    boost::optional<std::string> source_currency;
+    boost::optional<std::string> destination_currency;
     boost::optional<std::string> m_payment_id;
     boost::optional<monero_tx_priority> m_priority;
     boost::optional<uint32_t> m_ring_size;
@@ -370,7 +362,6 @@ namespace monero {
     boost::optional<uint64_t> m_below_amount;
     boost::optional<bool> m_sweep_each_subaddress;
     boost::optional<std::string> m_key_image;
-    boost::optional<haven_tx_type> m_tx_type;
     monero_tx_config() {}
     monero_tx_config(const monero_tx_config& config);
     monero_tx_config copy() const;

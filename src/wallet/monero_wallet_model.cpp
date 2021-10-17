@@ -1117,8 +1117,8 @@ namespace monero {
     }
     m_payment_id = config.m_payment_id;
     m_priority = config.m_priority;
-    m_tx_type = config.m_tx_type;
-    m_currency = config.m_currency;
+    source_currency = config.source_currency;
+    destination_currency = config.destination_currency;
     m_ring_size = config.m_ring_size;
     m_fee = config.m_fee;
     m_account_index = config.m_account_index;
@@ -1145,7 +1145,6 @@ namespace monero {
     // set num values
     rapidjson::Value value_num(rapidjson::kNumberType);
     if (m_priority != boost::none) monero_utils::addJsonMember("priority", m_priority.get(), allocator, root, value_num);
-    if (m_priority != boost::none) monero_utils::addJsonMember("txType", m_tx_type.get(), allocator, root, value_num);
     if (m_ring_size != boost::none) monero_utils::addJsonMember("ringSize", m_ring_size.get(), allocator, root, value_num);
     if (m_account_index != boost::none) monero_utils::addJsonMember("accountIndex", m_account_index.get(), allocator, root, value_num);
     if (m_unlock_height != boost::none) monero_utils::addJsonMember("unlockHeight", m_unlock_height.get(), allocator, root, value_num);
@@ -1157,7 +1156,8 @@ namespace monero {
     if (m_note != boost::none) monero_utils::addJsonMember("note", m_note.get(), allocator, root, value_str);
     if (m_recipient_name != boost::none) monero_utils::addJsonMember("recipientName", m_recipient_name.get(), allocator, root, value_str);
     if (m_key_image != boost::none) monero_utils::addJsonMember("keyImage", m_key_image.get(), allocator, root, value_str);
-    if (m_currency != boost::none) monero_utils::addJsonMember("currency", m_currency.get(), allocator, root, value_str);
+    if (source_currency != boost::none) monero_utils::addJsonMember("sourceCurrency", source_currency.get(), allocator, root, value_str);
+    if (destination_currency != boost::none) monero_utils::addJsonMember("destinationCurrency", destination_currency.get(), allocator, root, value_str);
 
 
     // set bool values
@@ -1192,7 +1192,8 @@ namespace monero {
           config->m_destinations.push_back(destination);
         }
       }
-      else if (key == std::string("currency")) config->m_currency = it->second.data();
+      else if (key == std::string("sourceCurrency")) config->source_currency = it->second.data();
+      else if (key == std::string("destinationCurrency")) config->destination_currency = it->second.data();
       else if (key == std::string("paymentId")) config->m_payment_id = it->second.data();
       else if (key == std::string("priority")) {
         uint32_t priority_num = it->second.get_value<uint32_t>();
@@ -1201,13 +1202,6 @@ namespace monero {
         else if (priority_num == 2) config->m_priority = monero_tx_priority::NORMAL;
         else if (priority_num == 3) config->m_priority = monero_tx_priority::ELEVATED;
         else throw std::runtime_error("Invalid priority number: " + std::to_string(priority_num));
-      }
-      else if (key == std::string("txType")) {
-        uint32_t tx_type_num = it->second.get_value<uint32_t>();
-        if (tx_type_num == 0) config->m_tx_type = haven_tx_type::TRANSFER;
-        else if (tx_type_num == 1) config->m_tx_type = haven_tx_type::EXCHANGE_FROM_USD;
-        else if (tx_type_num == 2) config->m_tx_type = haven_tx_type::EXCHANGE_TO_USD;
-        else throw std::runtime_error("Invalid tx_type number: " + std::to_string(tx_type_num));
       }
       else if (key == std::string("ringSize")) config->m_ring_size = it->second.get_value<uint32_t>();
       else if (key == std::string("fee")) config->m_fee = it->second.get_value<uint64_t>();
