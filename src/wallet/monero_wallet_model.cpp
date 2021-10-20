@@ -65,7 +65,7 @@ namespace monero {
 
   void merge_incoming_transfer(std::vector<std::shared_ptr<monero_incoming_transfer>>& transfers, const std::shared_ptr<monero_incoming_transfer>& transfer) {
     for (const std::shared_ptr<monero_incoming_transfer>& aTransfer : transfers) {
-      if (aTransfer->m_account_index.get() == transfer->m_account_index.get() && aTransfer->m_subaddress_index.get() == transfer->m_subaddress_index.get()) {
+      if (aTransfer->m_account_index.get() == transfer->m_account_index.get() && aTransfer->m_subaddress_index.get() == transfer->m_subaddress_index.get() && aTransfer->m_currency == transfer->m_currency) {
         aTransfer->merge(aTransfer, transfer);
         return;
       }
