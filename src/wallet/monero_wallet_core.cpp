@@ -766,7 +766,7 @@ namespace monero {
       if (m_wallet.get_listeners().empty()) return;
 
       // create library tx
- /*      std::shared_ptr<monero_tx_wallet> tx = std::static_pointer_cast<monero_tx_wallet>(monero_utils::cn_tx_to_tx(cn_tx, true));
+      std::shared_ptr<monero_tx_wallet> tx = std::static_pointer_cast<monero_tx_wallet>(monero_utils::cn_tx_to_tx(cn_tx, true));
       tx->m_hash = epee::string_tools::pod_to_hex(txid);
       tx->m_is_locked = true;
       std::shared_ptr<monero_output_wallet> output = std::make_shared<monero_output_wallet>();
@@ -775,26 +775,28 @@ namespace monero {
       output->m_amount = amount;
       output->m_account_index = subaddr_index.major;
       output->m_subaddress_index = subaddr_index.minor;
+      output->m_currency = "";
 
       // notify listeners of output
       for (monero_wallet_listener* listener : m_wallet.get_listeners()) {
         listener->on_output_received(*output);
-      } */
+      }
 
       // notify if balances or unlocked txs changed
       check_for_changed_funds();
 
       // free memory
-   /*    output.reset();
-      tx.reset(); */
+      output.reset();
+      tx.reset();
     }
 
     void on_money_received(uint64_t height, const crypto::hash &txid, const cryptonote::transaction& cn_tx, uint64_t amount, const cryptonote::subaddress_index& subaddr_index, bool is_change, uint64_t unlock_height, std::string asset_type) override {
       if (m_wallet.get_listeners().empty()) return;
 
       // create native library tx
-    /*   std::shared_ptr<monero_block> block = std::make_shared<monero_block>();
+      std::shared_ptr<monero_block> block = std::make_shared<monero_block>();
       block->m_height = height;
+      // in the next line error is thrown
       std::shared_ptr<monero_tx_wallet> tx = std::static_pointer_cast<monero_tx_wallet>(monero_utils::cn_tx_to_tx(cn_tx, true));
       block->m_txs.push_back(tx);
       tx->m_block = block;
@@ -807,24 +809,25 @@ namespace monero {
       output->m_amount = amount;
       output->m_account_index = subaddr_index.major;
       output->m_subaddress_index = subaddr_index.minor;
+      output->m_currency = asset_type;
 
       // notify listeners of output
       for (monero_wallet_listener* listener : m_wallet.get_listeners()) {
         listener->on_output_received(*output);
-      } */
+      }
 
       // notify if balances changed
       check_for_changed_funds(asset_type);
 
       // free memory
-/*       monero_utils::free(block);
+      monero_utils::free(block);
       output.reset();
-      tx.reset(); */
+      tx.reset();
     }
 
     void on_money_spent(uint64_t height, const crypto::hash &txid, const cryptonote::transaction& cn_tx_in, uint64_t amount, const cryptonote::transaction& cn_tx_out, const cryptonote::subaddress_index& subaddr_index, std::string asset_type) override {
       if (m_wallet.get_listeners().empty()) return;
-  /*     if (&cn_tx_in != &cn_tx_out) throw std::runtime_error("on_money_spent() in tx is different than out tx");
+      if (&cn_tx_in != &cn_tx_out) throw std::runtime_error("on_money_spent() in tx is different than out tx");
 
       // create native library tx
       std::shared_ptr<monero_block> block = std::make_shared<monero_block>();
@@ -839,19 +842,19 @@ namespace monero {
       output->m_amount = amount;
       output->m_account_index = subaddr_index.major;
       output->m_subaddress_index = subaddr_index.minor;
-
+      output->m_currency = asset_type;
       // notify listeners of output
       for (monero_wallet_listener* listener : m_wallet.get_listeners()) {
         listener->on_output_spent(*output);
-      } */
+      }
 
       // notify if balances changed
       check_for_changed_funds(asset_type);
 
       // free memory
-/*       monero_utils::free(block);
+      monero_utils::free(block);
       output.reset();
-      tx.reset(); */
+      tx.reset();
     }
 
   private:
