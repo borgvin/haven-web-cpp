@@ -1855,7 +1855,13 @@ namespace monero {
           {
               unlock_time = 1440 + m_w2->get_daemon_blockchain_height(err);
           } 
-      } 
+      }
+
+    if (tx_type == t_type::OFFSHORE_TRANSFER || tx_type == t_type::XASSET_TRANSFER) {
+      if (priority > 1) {
+        priority = 1;
+      }
+    } 
 
     if (!validate_transfer(m_w2.get(), tr_destinations, payment_id, dsts, extra, true, er)) {
       throw std::runtime_error(er.message);
