@@ -1855,11 +1855,6 @@ namespace monero {
           {
               unlock_time = 1440 + m_w2->get_daemon_blockchain_height(err);
           } 
-          //any transfers
-          else
-          {
-            unlock_time = 10 + m_w2->get_daemon_blockchain_height(err);
-          }
       } 
 
     if (!validate_transfer(m_w2.get(), tr_destinations, payment_id, dsts, extra, true, er)) {
