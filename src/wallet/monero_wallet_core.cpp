@@ -1826,38 +1826,51 @@ namespace monero {
     // uint32_t priority = m_w2->adjust_priority(config.m_priority == boost::none ? 0 : config.m_priority.get());
 
     uint32_t priority = config.m_priority.get();
+    uint64_t locked_blocks = 0;
     uint64_t unlock_time = 0;
-    
-    std::string err;
+
+
     // adjust unlock time for offshore/onshore tx
     if (tx_type == t_type::ONSHORE || tx_type == t_type::OFFSHORE) {
       //increment priority -> for onshore/offhore we use a priority range from 1-4, but for default 0-3
       //therefore we increment here when its onshore/offshore 
-        priority++;
+       
 
           // set unlock time
-        if (0/*m_w2->use_fork_rules(HF_VERSION_OFFSHORE_FEES_V3, 0)*/)
-        {
-          unlock_time = ((priority == 4) ? 180 : (priority == 3) ? 1440 : (priority == 2) ? 3600 : 7200) + m_w2->get_daemon_blockchain_height(err);
+        if (m_wallet->use_fork_rules(HF_PER_OUTPUT_UNLOCK_VERSION, 0)) {
+          // Long offshore lock, short onshore lock, no effect from priority
+          if (tx_type == t_type::OFFSHORE) {
+
+            locked_blocks = (21*720); // ~21 days
+
+          } 
+          else if (tx_type == t_type::ONSHORE) {
+
+            locked_blocks = (12*30); // ~12 hours
+
+          } else if ((tx_type == t_type::XUSD_TO_XASSET || tx_type == tt::XASSET_TO_XUSD) && m_wallet->use_fork_rules(HF_VERSION_XASSET_FEES_V2)) {
+            
+            locked_blocks = 1440; // ~48 hours
+
+          }
         }
-        else if (m_w2->use_fork_rules(HF_VERSION_OFFSHORE_FEES_V2, 0))
+        else 
         {
-          unlock_time = ((priority == 4) ? 180 : (priority == 3) ? 720 : (priority == 2) ? 1440 : 5040) + m_w2->get_daemon_blockchain_height(err);
-        }
-        else
-        {
-          unlock_time = 60 * pow(3, std::max((uint32_t)0, 4 - priority)) + m_w2->get_daemon_blockchain_height(err);
+          //imcrement prio, frontend is sending prios between 0-3, while we need 1-4 here
+          priority++;
+          locked_blocks = ((priority == 4) ? 180 : (priority == 3) ? 1440 : (priority == 2) ? 3600 : 7200);
+
         }
       } 
       else {
             //xassets conversions
           if (tx_type == t_type::XUSD_TO_XASSET || tx_type == t_type::XASSET_TO_XUSD) 
           {
-              unlock_time = 1440 + m_w2->get_daemon_blockchain_height(err);
+            locked_blocks = 1440;
           } 
       }
 
-    if (tx_type == t_type::OFFSHORE_TRANSFER || tx_type == t_type::XASSET_TRANSFER) {
+    if (tx_type == t_type::OFFSHORE_TRANSFER || tx_type == t_type::XASSET_TRANSFER || tx_type == t_type::ONSHORE || tx_type == t_type::OFFSHORE) {
       if (priority > 1) {
         priority = 1;
       }
@@ -1873,8 +1886,9 @@ namespace monero {
     std::set<uint32_t> subaddress_indices;
     for (const uint32_t& subaddress_idx : config.m_subaddress_indices) subaddress_indices.insert(subaddress_idx);
 
-
-  
+    std::string err;
+    uint64_t bc_height = m_w2->get_daemon_blockchain_height(err);
+    unlock_time = bc_height + locked_blocks;
     // prepare transactions
     std::vector<wallet2::pending_tx> ptx_vector = m_w2->create_transactions_2(dsts, mixin, source_currency, destination_currency, tx_type, unlock_time, priority, extra, account_index, subaddress_indices);
     if (ptx_vector.empty()) throw std::runtime_error("No transaction created");
