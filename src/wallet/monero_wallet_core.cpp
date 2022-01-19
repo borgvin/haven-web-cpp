@@ -1837,7 +1837,7 @@ namespace monero {
        
 
           // set unlock time
-        if (m_wallet->use_fork_rules(HF_PER_OUTPUT_UNLOCK_VERSION, 0)) {
+        if (m_w2->use_fork_rules(HF_PER_OUTPUT_UNLOCK_VERSION, 0)) {
           // Long offshore lock, short onshore lock, no effect from priority
           if (tx_type == t_type::OFFSHORE) {
 
@@ -1848,7 +1848,7 @@ namespace monero {
 
             locked_blocks = (12*30); // ~12 hours
 
-          } else if ((tx_type == t_type::XUSD_TO_XASSET || tx_type == tt::XASSET_TO_XUSD) && m_wallet->use_fork_rules(HF_VERSION_XASSET_FEES_V2)) {
+          } else if ((tx_type == t_type::XUSD_TO_XASSET || tx_type == t_type::XASSET_TO_XUSD) && m_w2->use_fork_rules(HF_VERSION_XASSET_FEES_V2)) {
             
             locked_blocks = 1440; // ~48 hours
 
