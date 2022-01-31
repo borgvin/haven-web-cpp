@@ -278,7 +278,7 @@ namespace monero {
     m_is_incoming = gen_utils::reconcile(m_is_incoming, other->m_is_incoming);
     m_is_outgoing = gen_utils::reconcile(m_is_outgoing, other->m_is_outgoing);
     m_note = gen_utils::reconcile(m_note, other->m_note);
-    m_is_locked = gen_utils::reconcile(m_is_locked, other->m_is_locked);
+    //m_is_locked = gen_utils::reconcile(m_is_locked, other->m_is_locked);
     m_input_sum = gen_utils::reconcile(m_input_sum, other->m_input_sum);
     m_output_sum = gen_utils::reconcile(m_output_sum, other->m_output_sum);
     m_change_address = gen_utils::reconcile(m_change_address, other->m_change_address);
