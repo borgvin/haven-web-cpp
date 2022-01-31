@@ -450,7 +450,7 @@ namespace monero {
     m_max_used_block_height = gen_utils::reconcile(m_max_used_block_height, other->m_max_used_block_height, "max_used_block_height");
     m_max_used_block_hash = gen_utils::reconcile(m_max_used_block_hash, other->m_max_used_block_hash);
     //m_signatures = gen_utils::reconcile(m_signatures, other->m_signatures); // TODO
-    m_unlock_height = gen_utils::reconcile(m_unlock_height, other->m_unlock_height, "m_unlock_height");
+   // m_unlock_height = gen_utils::reconcile(m_unlock_height, other->m_unlock_height, "m_unlock_height");
     m_num_confirmations = gen_utils::reconcile(m_num_confirmations, other->m_num_confirmations, "m_num_confirmations");
 
     // merge inputs
