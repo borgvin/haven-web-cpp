@@ -1888,7 +1888,12 @@ namespace monero {
 
     std::string err;
     uint64_t bc_height = m_w2->get_daemon_blockchain_height(err);
-    unlock_time = bc_height + locked_blocks;
+
+    if (tx_type != t_type::OFFSHORE_TRANSFER && tx_type != t_type::XASSET_TRANSFER && tx_type != t_type::TRANSFER) 
+    {
+      unlock_time = bc_height + locked_blocks;
+    }
+    
     // prepare transactions
     std::vector<wallet2::pending_tx> ptx_vector = m_w2->create_transactions_2(dsts, mixin, source_currency, destination_currency, tx_type, unlock_time, priority, extra, account_index, subaddress_indices);
     if (ptx_vector.empty()) throw std::runtime_error("No transaction created");
