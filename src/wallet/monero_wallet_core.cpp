@@ -1436,10 +1436,10 @@ namespace monero {
   }
 
 
-   uint64_t monero_wallet_core::get_collateral_requirements(const std::string& source_currency, const std::string& destination_currency, uint64_t amounts) const {
+   uint64_t monero_wallet_core::get_collateral_requirements(const std::string& source_asset_type, const std::string& destination_asset_type, uint64_t amounts) const {
 
     cryptonote::transaction_type tx_type;
-    bool isValidTxType = cryptonote::get_tx_type(source_currency, destination_currency, tx_type);
+    bool isValidTxType = cryptonote::get_tx_type(source_asset_type, destination_asset_type, tx_type);
 
     if (!isValidTxType) {
         throw std::runtime_error("not a valid tx type");

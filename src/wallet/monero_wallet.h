@@ -497,6 +497,18 @@ namespace monero {
       throw std::runtime_error("rescan_blockchain() not supported");
     }
 
+      /**
+     * Get required collateral for an onshore/offshore Tx
+     *
+     * @param source_asset_type is the source asset type
+     * @param destination_asset_type is the destination asset type
+     * @param amount is the amount we want to know the required collateral of
+     * @return required collateral
+     */
+    virtual uint64_t get_collateral_requirements(const std::string& source_asset_type, const std::string& destination_asset_type, uint64_t amount) const {
+      throw std::runtime_error("get_required_collateral() not supported");
+    }
+
     /**
      * Get the wallet's balance.
      *
