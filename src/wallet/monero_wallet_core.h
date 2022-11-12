@@ -208,6 +208,7 @@ namespace monero {
     void stop_syncing() override;
     void rescan_spent() override;
     void rescan_blockchain() override;
+    uint64_t get_collateral_requirements(const std::string& source_asset_type, const std::string& destination_asset_type, uint64_t amounts) const override;
     std::map<std::string, uint64_t> get_balance() const override;
     std::map<uint32_t, std::map<std::string, uint64_t>> get_balance(uint32_t account_idx) const override;
     uint64_t get_balance(const std::string& asset_type, uint32_t account_idx) const override;

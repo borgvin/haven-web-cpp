@@ -1435,6 +1435,21 @@ namespace monero {
     lock_and_sync();
   }
 
+
+   uint64_t monero_wallet_core::get_collateral_requirements(const std::string& source_currency, const std::string& destination_currency, uint64_t amounts) const {
+
+    cryptonote::transaction_type tx_type;
+    bool isValidTxType = cryptonote::get_tx_type(source_currency, destination_currency, tx_type);
+
+    if (!isValidTxType) {
+        throw std::runtime_error("not a valid tx type");
+    }
+
+    uint64_t collateral;
+    m_w2->get_collateral_requirements(tx_type, amounts, collateral);
+    return collateral;
+  }
+
   // isMultisigImportNeeded
 
   std::map<std::string, uint64_t> monero_wallet_core::get_balance() const {
