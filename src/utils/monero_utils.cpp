@@ -222,6 +222,16 @@ rapidjson::Value monero_utils::to_rapidjson_val(rapidjson::Document::AllocatorTy
     return value_obj;
   }
 
+  rapidjson::Value monero_utils::to_rapidjson_val(rapidjson::Document::AllocatorType& allocator, const std::map<std::string, std::string>& map) {
+
+    rapidjson::Value value_obj(rapidjson::kObjectType);
+    rapidjson::Value value_str(rapidjson::kStringType);
+    for (const auto& m : map) {
+      addJsonMember(m.first, m.second, allocator, value_obj, value_str);
+    }
+    return value_obj;
+  }
+
 
 // ------------------------ PROPERTY TREES ---------------------------
 
