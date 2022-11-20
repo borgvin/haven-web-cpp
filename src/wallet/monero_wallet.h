@@ -497,7 +497,25 @@ namespace monero {
       throw std::runtime_error("rescan_blockchain() not supported");
     }
 
-      /**
+     /**
+     * Get circulating supply of asets
+     *
+     * @return circulating supply
+     */
+    virtual std::vector<std::pair<std::string, std::string>> get_circulating_supply() const {
+      throw std::runtime_error("get_circulating_supply() not supported");
+    }
+
+    /**
+     * Get block cap of possible onshoring/offshoring amounts of latest block
+     *
+     * @return block cap
+     */
+    virtual uint64_t get_block_cap() const {
+      throw std::runtime_error("get_block_cap() not supported");
+    }
+
+    /**
      * Get required collateral for an onshore/offshore Tx
      *
      * @param source_asset_type is the source asset type
@@ -507,6 +525,17 @@ namespace monero {
      */
     virtual uint64_t get_collateral_requirements(const std::string& source_asset_type, const std::string& destination_asset_type, uint64_t amount) const {
       throw std::runtime_error("get_required_collateral() not supported");
+    }
+
+    /**
+     * Get possible max amount for Tx
+     *
+     * @param source_asset_type is the source asset type
+     * @param destination_asset_type is the destination asset type
+     * @return max amount
+     */
+    virtual uint64_t get_max_destination_amount(const std::string& source_asset_type, const std::string& destination_asset_type) const {
+      throw std::runtime_error("get_max_destination_amount() not supported");
     }
 
     /**

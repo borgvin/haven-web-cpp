@@ -1435,8 +1435,36 @@ namespace monero {
     lock_and_sync();
   }
 
+  std::vector<std::pair<std::string, std::string>> monero_wallet_core::get_circulating_supply() const {
+    std::vector<std::pair<std::string, std::string>> supply_amounts;
+    if(!m_w2->get_circulating_supply(supply_amounts)) {
+      throw std::runtime_error("failed to get circulating supply. Make sure you are connected to a daemon.");
+    }
+    return supply_amounts;
+  }
 
-   uint64_t monero_wallet_core::get_collateral_requirements(const std::string& source_asset_type, const std::string& destination_asset_type, uint64_t amounts) const {
+  uint64_t monero_wallet_core::get_block_cap() const {
+
+    std::vector<std::pair<std::string, std::string>> supply_amounts;
+    if(!m_w2->get_circulating_supply(supply_amounts)) {
+      throw std::runtime_error("failed to get circulating supply. Make sure you are connected to a daemon.");
+    }
+
+    // get pricing record
+    std::string err;
+    uint64_t bc_height = m_w2->get_daemon_blockchain_height(err);
+    offshore::pricing_record pr;
+    if (!m_w2->get_pricing_record(pr, bc_height-1)) {
+       throw std::runtime_error("failed to get pricing record. Make sure you are connected to a daemon.");
+    }
+    
+    // calculate current block cap
+    uint64_t block_cap = cryptonote::get_block_cap(supply_amounts, pr);
+    return block_cap;
+  }
+
+
+   uint64_t monero_wallet_core::get_collateral_requirements(const std::string& source_asset_type, const std::string& destination_asset_type, uint64_t amount) const {
 
     cryptonote::transaction_type tx_type;
     bool isValidTxType = cryptonote::get_tx_type(source_asset_type, destination_asset_type, tx_type);
@@ -1446,8 +1474,27 @@ namespace monero {
     }
 
     uint64_t collateral;
-    m_w2->get_collateral_requirements(tx_type, amounts, collateral);
+    m_w2->get_collateral_requirements(tx_type, amount, collateral);
     return collateral;
+  }
+
+  uint64_t monero_wallet_core::get_max_destination_amount(const std::string& source_asset_type, const std::string& destination_asset_type) const {
+
+    cryptonote::transaction_type tx_type;
+    bool isValidTxType = cryptonote::get_tx_type(source_asset_type, destination_asset_type, tx_type);
+
+    if (!isValidTxType) {
+        throw std::runtime_error("not a valid tx type");
+    }
+    std::string err;
+    uint64_t max_amount;
+    bool ok = m_w2->get_max_destination_amount(tx_type, source_asset_type, destination_asset_type, max_amount, err);
+    if(ok) {
+        return max_amount;
+    } else {
+       throw std::runtime_error(err);
+    }
+   
   }
 
   // isMultisigImportNeeded
