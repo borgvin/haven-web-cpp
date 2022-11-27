@@ -256,6 +256,7 @@ namespace monero {
     boost::optional<uint64_t> m_output_sum;
     boost::optional<std::string> m_change_address;
     boost::optional<uint64_t> m_change_amount;
+    boost::optional<uint64_t> m_collateral_amount;
     boost::optional<uint32_t> m_num_dummy_outputs;
     boost::optional<std::string> m_extra_hex;
     rapidjson::Value to_rapidjson_val(rapidjson::Document::AllocatorType& allocator) const;

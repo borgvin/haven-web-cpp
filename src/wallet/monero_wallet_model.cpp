@@ -173,6 +173,7 @@ namespace monero {
     if (m_input_sum != boost::none) monero_utils::addJsonMember("inputSum", m_input_sum.get(), allocator, root, value_num);
     if (m_output_sum != boost::none) monero_utils::addJsonMember("outputSum", m_output_sum.get(), allocator, root, value_num);
     if (m_change_amount != boost::none) monero_utils::addJsonMember("changeAmount", m_change_amount.get(), allocator, root, value_num);
+    if (m_collateral_amount != boost::none) monero_utils::addJsonMember("collateralAmount", m_collateral_amount.get(), allocator, root, value_num);
     if (m_num_dummy_outputs != boost::none) monero_utils::addJsonMember("numDummyOutputs", m_num_dummy_outputs.get(), allocator, root, value_num);
 
     // set std::string values
@@ -242,6 +243,7 @@ namespace monero {
     tgt->m_output_sum = src->m_output_sum;
     tgt->m_change_address = src->m_change_address;
     tgt->m_change_amount = src->m_change_amount;
+    tgt->m_collateral_amount = src->m_collateral_amount;
     tgt->m_num_dummy_outputs = src->m_num_dummy_outputs;
     tgt->m_extra_hex = src->m_extra_hex;
 
@@ -283,6 +285,7 @@ namespace monero {
     m_output_sum = gen_utils::reconcile(m_output_sum, other->m_output_sum);
     m_change_address = gen_utils::reconcile(m_change_address, other->m_change_address);
     m_change_amount = gen_utils::reconcile(m_change_amount, other->m_change_amount);
+    m_collateral_amount = gen_utils::reconcile(m_collateral_amount, other->m_collateral_amount);
     m_num_dummy_outputs = gen_utils::reconcile(m_num_dummy_outputs, other->m_num_dummy_outputs);
     m_extra_hex = gen_utils::reconcile(m_extra_hex, other->m_extra_hex);
   }
