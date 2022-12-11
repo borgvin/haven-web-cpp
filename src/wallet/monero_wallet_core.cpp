@@ -171,10 +171,10 @@ namespace monero {
     return tx;
   }
 
-  std::shared_ptr<monero_tx_wallet> build_tx_with_outgoing_transfer(const tools::wallet2& m_w2, uint64_t height, const crypto::hash &txid, const tools::wallet2::confirmed_transfer_details &pd) {
+  std::shared_ptr<monero_tx_wallet>  build_tx_with_outgoing_transfer(const tools::wallet2& m_w2, uint64_t height, const crypto::hash &txid, const tools::wallet2::confirmed_transfer_details &pd) {
 
     // construct block
-    std::shared_ptr<monero_block> block = std::make_shared<monero_block>();
+    std::shared_ptr<monero_block> block = std::make_shared<monero_block>(); 
     block->m_height = pd.m_block_height;
     block->m_timestamp = pd.m_timestamp;
     // construct tx
@@ -226,8 +226,10 @@ namespace monero {
     // initialize destinations
     for (const auto &d: pd.m_dests) {
       std::shared_ptr<monero_destination> destination = std::make_shared<monero_destination>();
-      destination->m_amount = d.amount;
+      destination->m_currency = d.asset_type;
+      destination->m_amount = d.asset_type == "XHV" ? d.amount : d.asset_type == "XUSD" ? d.amount_usd : d.amount_xasset;
       destination->m_address = d.address(m_w2.nettype(), pd.m_payment_id);
+      destination->m_is_collateral = d.is_collateral;
       outgoing_transfer->m_destinations.push_back(destination);
     }
 
@@ -235,7 +237,7 @@ namespace monero {
     // TODO monero core: confirmed tx from/to same account has amount 0 but cached transfer destinations
     if (*outgoing_transfer->m_amount == 0 && !outgoing_transfer->m_destinations.empty()) {
       uint64_t amount = 0;
-      for (const std::shared_ptr<monero_destination>& destination : outgoing_transfer->m_destinations) amount += *destination->m_amount;
+      for (const std::shared_ptr<monero_destination>& destination : outgoing_transfer->m_destinations) amount += *destination->m_is_collateral ? 0 : *destination->m_amount;
       outgoing_transfer->m_amount = amount;
     }
 
@@ -332,8 +334,10 @@ namespace monero {
     // initialize destinations
     for (const auto &d: pd.m_dests) {
       std::shared_ptr<monero_destination> destination = std::make_shared<monero_destination>();
-      destination->m_amount = d.amount;
+      destination->m_currency = d.asset_type;
+      destination->m_amount = d.asset_type == "XHV" ? d.amount : d.asset_type == "XUSD" ? d.amount_usd : d.amount_xasset;
       destination->m_address = d.address(m_w2.nettype(), pd.m_payment_id);
+      destination->m_is_collateral = d.is_collateral;
       outgoing_transfer->m_destinations.push_back(destination);
     }
 
@@ -341,7 +345,7 @@ namespace monero {
     // TODO monero core: confirmed tx from/to same account has amount 0 but cached transfer destinations
     if (*outgoing_transfer->m_amount == 0 && !outgoing_transfer->m_destinations.empty()) {
       uint64_t amount = 0;
-      for (const std::shared_ptr<monero_destination>& destination : outgoing_transfer->m_destinations) amount += *destination->m_amount;
+      for (const std::shared_ptr<monero_destination>& destination : outgoing_transfer->m_destinations) amount += *destination->m_is_collateral ? 0 : *destination->m_amount;
       outgoing_transfer->m_amount = amount;
     }
 
@@ -627,7 +631,7 @@ namespace monero {
    static uint64_t total_amount(const tools::wallet2::pending_tx &ptx, bool use_offshore_amounts, bool use_xasset_amounts)
   {
     uint64_t amount = 0;
-    for (const auto &dest: ptx.dests) amount += (dest.is_collateral ? 0 : use_offshore_amounts ? dest.amount_usd : use_xasset_amounts ? dest.amount_xasset : dest.amount);
+    for (const auto &dest: ptx.dests) amount += (dest.is_collateral ? 0 :  use_offshore_amounts ? dest.amount_usd : use_xasset_amounts ? dest.amount_xasset : dest.amount);
     return amount;
   }
     //------------------------------------------------------------------------------------------------------------------------------

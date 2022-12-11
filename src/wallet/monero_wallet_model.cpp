@@ -545,6 +545,10 @@ namespace monero {
     // set std::string values
     rapidjson::Value value_str(rapidjson::kStringType);
     if (m_address != boost::none) monero_utils::addJsonMember("address", m_address.get(), allocator, root, value_str);
+    if (m_currency != boost::none) monero_utils::addJsonMember("currency", m_currency.get(), allocator, root, value_str);
+
+         // set bool value
+    if (m_is_collateral != boost::none) monero_utils::addJsonMember("isCollateral", m_is_collateral.get(), allocator, root);
 
     // return root
     return root;
@@ -555,6 +559,8 @@ namespace monero {
       std::string key = it->first;
       if (key == std::string("address")) destination->m_address = it->second.data();
       else if (key == std::string("amount")) destination->m_amount = it->second.get_value<uint64_t>();
+      else if (key == std::string("isCollateral")) destination->m_is_collateral = it->second.get_value<bool>();
+      else if (key == std::string("currency")) destination->m_currency = it->second.data();
     }
   }
 
@@ -563,6 +569,8 @@ namespace monero {
     if (this != src.get()) throw std::runtime_error("this != src");
     tgt->m_address = src->m_address;
     tgt->m_amount = src->m_amount;
+    tgt->m_currency = src->m_currency;
+    tgt->m_is_collateral = src->m_is_collateral;
     return tgt;
   };
 
