@@ -210,7 +210,7 @@ namespace monero {
     outgoing_transfer->m_tx = tx;
     tx->m_outgoing_transfer = outgoing_transfer;
     uint64_t change = pd.m_change == (uint64_t)-1 ? 0 : pd.m_change; // change may not be known
-    outgoing_transfer->m_amount = pd.m_amount_in - change - *tx->m_fee;
+    outgoing_transfer->m_amount = pd.m_amount_out - change;
     outgoing_transfer->m_account_index = pd.m_subaddr_account;
     outgoing_transfer->m_currency = pd.m_source_currency_type;
 
@@ -226,20 +226,20 @@ namespace monero {
     // initialize destinations
     for (const auto &d: pd.m_dests) {
       std::shared_ptr<monero_destination> destination = std::make_shared<monero_destination>();
-      destination->m_currency = d.asset_type;
+      //destination->m_currency = d.asset_type;
       destination->m_amount = d.asset_type == "XHV" ? d.amount : d.asset_type == "XUSD" ? d.amount_usd : d.amount_xasset;
       destination->m_address = d.address(m_w2.nettype(), pd.m_payment_id);
-      destination->m_is_collateral = d.is_collateral;
+     // destination->m_is_collateral = d.is_collateral;
       outgoing_transfer->m_destinations.push_back(destination);
     }
 
     // replace transfer amount with destination sum
     // TODO monero core: confirmed tx from/to same account has amount 0 but cached transfer destinations
-    if (*outgoing_transfer->m_amount == 0 && !outgoing_transfer->m_destinations.empty()) {
-      uint64_t amount = 0;
-      for (const std::shared_ptr<monero_destination>& destination : outgoing_transfer->m_destinations) amount += *destination->m_is_collateral ? 0 : *destination->m_amount;
-      outgoing_transfer->m_amount = amount;
-    }
+    // if (*outgoing_transfer->m_amount == 0 && !outgoing_transfer->m_destinations.empty()) {
+    //   uint64_t amount = 0;
+    //   for (const std::shared_ptr<monero_destination>& destination : outgoing_transfer->m_destinations) amount += *destination->m_is_collateral ? 0 : *destination->m_amount;
+    //   outgoing_transfer->m_amount = amount;
+    // }
 
     // return pointer to new tx
     return tx;
@@ -318,7 +318,7 @@ namespace monero {
     outgoing_transfer->m_tx = tx;
     tx->m_outgoing_transfer = outgoing_transfer;
 
-    outgoing_transfer->m_amount = pd.m_amount_in - pd.m_change - tx->m_fee.get();
+    outgoing_transfer->m_amount = pd.m_amount_out - pd.m_change;
     outgoing_transfer->m_currency = pd.m_source_currency_type;
 
     outgoing_transfer->m_account_index = pd.m_subaddr_account;
@@ -334,20 +334,20 @@ namespace monero {
     // initialize destinations
     for (const auto &d: pd.m_dests) {
       std::shared_ptr<monero_destination> destination = std::make_shared<monero_destination>();
-      destination->m_currency = d.asset_type;
+      //destination->m_currency = d.asset_type;
       destination->m_amount = d.asset_type == "XHV" ? d.amount : d.asset_type == "XUSD" ? d.amount_usd : d.amount_xasset;
       destination->m_address = d.address(m_w2.nettype(), pd.m_payment_id);
-      destination->m_is_collateral = d.is_collateral;
+      //destination->m_is_collateral = d.is_collateral;
       outgoing_transfer->m_destinations.push_back(destination);
     }
 
     // replace transfer amount with destination sum
     // TODO monero core: confirmed tx from/to same account has amount 0 but cached transfer destinations
-    if (*outgoing_transfer->m_amount == 0 && !outgoing_transfer->m_destinations.empty()) {
-      uint64_t amount = 0;
-      for (const std::shared_ptr<monero_destination>& destination : outgoing_transfer->m_destinations) amount += *destination->m_is_collateral ? 0 : *destination->m_amount;
-      outgoing_transfer->m_amount = amount;
-    }
+    // if (*outgoing_transfer->m_amount == 0 && !outgoing_transfer->m_destinations.empty()) {
+    //   uint64_t amount = 0;
+    //   for (const std::shared_ptr<monero_destination>& destination : outgoing_transfer->m_destinations) amount += *destination->m_is_collateral ? 0 : *destination->m_amount;
+    //   outgoing_transfer->m_amount = amount;
+    // }
 
     // return pointer to new tx
     return tx;
@@ -1870,8 +1870,8 @@ namespace monero {
     if (config.destination_currency == boost::none) throw std::runtime_error("Must specify destination currency");
     std::string destination_currency = config.destination_currency.get();
 
-    using t_type = cryptonote::transaction_type;
-    t_type tx_type;
+    using tt = cryptonote::transaction_type;
+    tt tx_type;
 
     bool isValidTxType = cryptonote::get_tx_type(source_currency, destination_currency, tx_type);
 
@@ -1905,50 +1905,35 @@ namespace monero {
 
 
     // adjust unlock time for offshore/onshore tx
-    if (tx_type == t_type::ONSHORE || tx_type == t_type::OFFSHORE) {
-      //increment priority -> for onshore/offhore we use a priority range from 1-4, but for default 0-3
-      //therefore we increment here when its onshore/offshore 
-       
-
-          // set unlock time
-        if (m_w2->use_fork_rules(HF_PER_OUTPUT_UNLOCK_VERSION, 0)) {
-          // Long offshore lock, short onshore lock, no effect from priority
-          if (tx_type == t_type::OFFSHORE) {
-
-            locked_blocks = (21*720); // ~21 days
-
-          } 
-          else if (tx_type == t_type::ONSHORE) {
-
-            locked_blocks = (12*30); // ~12 hours
-
-          } else if ((tx_type == t_type::XUSD_TO_XASSET || tx_type == t_type::XASSET_TO_XUSD) && m_w2->use_fork_rules(HF_VERSION_XASSET_FEES_V2)) {
-            
-            locked_blocks = 1440; // ~48 hours
-
-          }
-        }
-        else 
-        {
-          //imcrement prio, frontend is sending prios between 0-3, while we need 1-4 here
-          priority++;
-          locked_blocks = ((priority == 4) ? 180 : (priority == 3) ? 1440 : (priority == 2) ? 3600 : 7200);
-
-        }
-      } 
-      else {
-            //xassets conversions
-          if (tx_type == t_type::XUSD_TO_XASSET || tx_type == t_type::XASSET_TO_XUSD) 
-          {
-            locked_blocks = 1440;
-          } 
-      }
-
-    if (tx_type == t_type::OFFSHORE_TRANSFER || tx_type == t_type::XASSET_TRANSFER || tx_type == t_type::ONSHORE || tx_type == t_type::OFFSHORE) {
-      if (priority > 1) {
-        priority = 1;
-      }
-    } 
+  if (m_w2->use_fork_rules(HF_VERSION_USE_COLLATERAL, 0)) {
+    if (tx_type == tt::OFFSHORE) {
+      locked_blocks = (m_w2->nettype() == cryptonote::TESTNET) ? TX_V6_OFFSHORE_UNLOCK_BLOCKS_TESTNET : TX_V6_OFFSHORE_UNLOCK_BLOCKS; // ~21 days
+    } else if (tx_type == tt::ONSHORE) {
+      locked_blocks = (m_w2->nettype() == cryptonote::TESTNET) ? TX_V6_ONSHORE_UNLOCK_BLOCKS_TESTNET : TX_V7_ONSHORE_UNLOCK_BLOCKS; // ~21 days
+    } else if (tx_type == tt::XUSD_TO_XASSET || tx_type == tt::XASSET_TO_XUSD) {
+      locked_blocks = (m_w2->nettype() == cryptonote::TESTNET) ? TX_V6_XASSET_UNLOCK_BLOCKS_TESTNET : TX_V6_XASSET_UNLOCK_BLOCKS; // ~48 hours
+    }
+  } else if (m_w2->use_fork_rules(HF_PER_OUTPUT_UNLOCK_VERSION, 0)) {
+    // Long offshore lock, short onshore lock, no effect from priority
+    if (tx_type == tt::OFFSHORE) {
+      locked_blocks = (m_w2->nettype() == cryptonote::TESTNET) ? TX_V6_OFFSHORE_UNLOCK_BLOCKS_TESTNET : TX_V6_OFFSHORE_UNLOCK_BLOCKS; // ~21 days
+    } else if (tx_type == tt::ONSHORE) {
+      locked_blocks = (m_w2->nettype() == cryptonote::TESTNET) ? TX_V6_ONSHORE_UNLOCK_BLOCKS_TESTNET : TX_V6_ONSHORE_UNLOCK_BLOCKS; // ~12 hours
+    } else if (tx_type == tt::XUSD_TO_XASSET || tx_type == tt::XASSET_TO_XUSD) {
+      locked_blocks = (m_w2->nettype() == cryptonote::TESTNET) ? TX_V6_XASSET_UNLOCK_BLOCKS_TESTNET : TX_V6_XASSET_UNLOCK_BLOCKS; // ~48 hours
+    }
+  } else {
+    if (tx_type == tt::OFFSHORE || tx_type == tt::ONSHORE) {
+      locked_blocks = (priority == 4) ? 180 : (priority == 3) ? 720 : (priority == 2) ? 1440 : 5040;
+    } else if ((tx_type == tt::XUSD_TO_XASSET || tx_type == tt::XASSET_TO_XUSD) && m_w2->use_fork_rules(HF_VERSION_XASSET_FEES_V2)) {
+      locked_blocks = 1440; // ~48 hours
+    }
+  }
+  if (tx_type == tt::OFFSHORE_TRANSFER || tx_type == tt::XASSET_TRANSFER) {
+    if (priority > 1) {
+      priority = 1;
+    }
+  }
 
     if (!validate_transfer(m_w2.get(), tr_destinations, payment_id, dsts, extra, true, er)) {
       throw std::runtime_error(er.message);
@@ -1963,7 +1948,7 @@ namespace monero {
     std::string err;
     uint64_t bc_height = m_w2->get_daemon_blockchain_height(err);
 
-    if (tx_type != t_type::OFFSHORE_TRANSFER && tx_type != t_type::XASSET_TRANSFER && tx_type != t_type::TRANSFER) 
+    if (tx_type != tt::OFFSHORE_TRANSFER && tx_type != tt::XASSET_TRANSFER && tx_type != tt::TRANSFER) 
     {
       unlock_time = bc_height + locked_blocks;
     }
@@ -2034,7 +2019,7 @@ namespace monero {
       out_transfer->m_currency = source_currency; 
 
       // for exchanges create incoming tx ( even if not send to yourself, to extract counter value later)
-      if (tx_type != t_type::TRANSFER && tx_type != t_type::OFFSHORE_TRANSFER && tx_type != t_type::XASSET_TRANSFER) {
+      if (tx_type != tt::TRANSFER && tx_type != tt::OFFSHORE_TRANSFER && tx_type != tt::XASSET_TRANSFER) {
 
 
         std::shared_ptr<monero_incoming_transfer> incoming_transfer = std::make_shared<monero_incoming_transfer>();
