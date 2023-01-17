@@ -1484,9 +1484,24 @@ namespace monero {
     if (!isValidTxType) {
         throw std::runtime_error("not a valid tx type");
     }
+    // get circulating supply
+    std::vector<std::pair<std::string, std::string>> supply_amounts;
+    if(!m_w2->get_circulating_supply(supply_amounts)) {
+      throw std::runtime_error("failed to get circulating supply. Make sure you are connected to a daemon.");
+    }
 
+    // get pricing record
+    std::string err;
+    uint64_t bc_height = m_w2->get_daemon_blockchain_height(err);
+    offshore::pricing_record pr;
+    if (!m_w2->get_pricing_record(pr, bc_height-1)) {
+       throw std::runtime_error("failed to get pricing record. Make sure you are connected to a daemon.");
+    }
+    
     uint64_t collateral;
-    m_w2->get_collateral_requirements(tx_type, amount, collateral);
+    if (!cryptonote::get_collateral_requirements(tx_type, amount, collateral, pr, supply_amounts)) {
+       throw std::runtime_error("failed to calculate collateral requirement. Make sure you are connected to a daemon.");
+    }
     return collateral;
   }
 
