@@ -66,16 +66,13 @@
 #include "wallet/wallet_rpc_server_commands_defs.h"
 #include "serialization/binary_utils.h"
 #include "serialization/string.h"
-<<<<<<< HEAD:src/wallet/monero_wallet_core.cpp
 #include "offshore/asset_types.h"
 
 #ifdef WIN32
 #include <boost/locale.hpp>
 #include <boost/filesystem.hpp>
 #endif
-=======
 #include "common/threadpool.h"
->>>>>>> v0.7.6:src/wallet/monero_wallet_full.cpp
 
 using namespace tools;
 
@@ -184,15 +181,7 @@ namespace monero {
     tx->m_in_tx_pool = false;
     tx->m_relay = true;
     tx->m_is_double_spend_seen = false;
-<<<<<<< HEAD:src/wallet/monero_wallet_core.cpp
-    
-    // compute m_num_confirmations TODO monero core: this logic is based on wallet_rpc_server.cpp:87 but it should be encapsulated in wallet2
-    // TODO: factor out this duplicate code with build_tx_with_outgoing_transfer()
-    if (*block->m_height >= height || (*block->m_height == 0 && !*tx->m_in_tx_pool)) tx->m_num_confirmations = 0;
-    else tx->m_num_confirmations = height - *block->m_height;
-=======
     set_num_confirmations(tx, height);
->>>>>>> v0.7.6:src/wallet/monero_wallet_full.cpp
 
     // construct transfer
     std::shared_ptr<monero_incoming_transfer> incoming_transfer = std::make_shared<monero_incoming_transfer>();
@@ -209,14 +198,10 @@ namespace monero {
     return tx;
   }
 
-<<<<<<< HEAD:src/wallet/monero_wallet_core.cpp
-  std::shared_ptr<monero_tx_wallet>  build_tx_with_outgoing_transfer(const tools::wallet2& m_w2, uint64_t height, const crypto::hash &txid, const tools::wallet2::confirmed_transfer_details &pd) {
-=======
   std::shared_ptr<monero_tx_wallet> build_tx_with_outgoing_transfer(tools::wallet2& m_w2, uint64_t height, const crypto::hash &txid, const tools::wallet2::confirmed_transfer_details &pd) {
->>>>>>> v0.7.6:src/wallet/monero_wallet_full.cpp
 
     // construct block
-    std::shared_ptr<monero_block> block = std::make_shared<monero_block>(); 
+    std::shared_ptr<monero_block> block = std::make_shared<monero_block>();
     block->m_height = pd.m_block_height;
     block->m_timestamp = pd.m_timestamp;
     // construct tx
@@ -273,21 +258,12 @@ namespace monero {
     }
 
     // replace transfer amount with destination sum
-<<<<<<< HEAD:src/wallet/monero_wallet_core.cpp
-    // TODO monero core: confirmed tx from/to same account has amount 0 but cached transfer destinations
-    // if (*outgoing_transfer->m_amount == 0 && !outgoing_transfer->m_destinations.empty()) {
-    //   uint64_t amount = 0;
-    //   for (const std::shared_ptr<monero_destination>& destination : outgoing_transfer->m_destinations) amount += *destination->m_is_collateral ? 0 : *destination->m_amount;
-    //   outgoing_transfer->m_amount = amount;
-    // }
-=======
     // TODO monero-project: confirmed tx from/to same account has amount 0 but cached transfer destinations
     if (*outgoing_transfer->m_amount == 0 && !outgoing_transfer->m_destinations.empty()) {
       uint64_t amount = 0;
       for (const std::shared_ptr<monero_destination>& destination : outgoing_transfer->m_destinations) amount += *destination->m_amount;
       outgoing_transfer->m_amount = amount;
     }
->>>>>>> v0.7.6:src/wallet/monero_wallet_full.cpp
 
     // return pointer to new tx
     return tx;
@@ -325,16 +301,12 @@ namespace monero {
     incoming_transfer->m_account_index = pd.m_subaddr_index.major;
     incoming_transfer->m_subaddress_index = pd.m_subaddr_index.minor;
     incoming_transfer->m_address = m_w2.get_subaddress_as_str(pd.m_subaddr_index);
-<<<<<<< HEAD:src/wallet/monero_wallet_core.cpp
     incoming_transfer->m_currency = pd.m_asset_type;
 
     // compute m_num_suggested_confirmations  TODO monero core: this logic is based on wallet_rpc_server.cpp:87 but it should be encapsulated in wallet2
     uint64_t block_reward = m_w2.get_last_block_reward();
     if (block_reward == 0) incoming_transfer->m_num_suggested_confirmations = 0;
     else incoming_transfer->m_num_suggested_confirmations = (*incoming_transfer->m_amount + block_reward - 1) / block_reward;
-=======
-    set_num_suggested_confirmations(incoming_transfer, height, m_w2.get_last_block_reward(), pd.m_unlock_time);
->>>>>>> v0.7.6:src/wallet/monero_wallet_full.cpp
 
     // return pointer to new tx
     return tx;
@@ -394,21 +366,12 @@ namespace monero {
     }
 
     // replace transfer amount with destination sum
-<<<<<<< HEAD:src/wallet/monero_wallet_core.cpp
-    // TODO monero core: confirmed tx from/to same account has amount 0 but cached transfer destinations
-    // if (*outgoing_transfer->m_amount == 0 && !outgoing_transfer->m_destinations.empty()) {
-    //   uint64_t amount = 0;
-    //   for (const std::shared_ptr<monero_destination>& destination : outgoing_transfer->m_destinations) amount += *destination->m_is_collateral ? 0 : *destination->m_amount;
-    //   outgoing_transfer->m_amount = amount;
-    // }
-=======
     // TODO monero-project: confirmed tx from/to same account has amount 0 but cached transfer destinations
     if (*outgoing_transfer->m_amount == 0 && !outgoing_transfer->m_destinations.empty()) {
       uint64_t amount = 0;
       for (const std::shared_ptr<monero_destination>& destination : outgoing_transfer->m_destinations) amount += *destination->m_amount;
       outgoing_transfer->m_amount = amount;
     }
->>>>>>> v0.7.6:src/wallet/monero_wallet_full.cpp
 
     // return pointer to new tx
     return tx;
@@ -695,13 +658,8 @@ namespace monero {
   //------------------------------------------------------------------------------------------------------------------------------
   template<typename Ts, typename Tu, typename Tk>
   bool fill_response(wallet2* m_w2, std::vector<tools::wallet2::pending_tx> &ptx_vector,
-<<<<<<< HEAD:src/wallet/monero_wallet_core.cpp
       bool get_tx_key, Ts& tx_key, Tu &amount, Tu &amount_usd, Tu &amount_xasset, Tu &amount_change, Tu &amount_collateral, Tu &fee, Tu &weight, std::string &multisig_txset, std::string &unsigned_txset, bool do_not_relay,
       Ts &tx_hash, bool get_tx_hex, Ts &tx_blob, bool get_tx_metadata, Ts &tx_metadata, epee::json_rpc::error &er)
-=======
-      bool get_tx_key, Ts& tx_key, Tu &amount, Tu &fee, Tu &weight, std::string &multisig_txset, std::string &unsigned_txset, bool do_not_relay,
-      Ts &tx_hash, bool get_tx_hex, Ts &tx_blob, bool get_tx_metadata, Ts &tx_metadata, Tk &spent_key_images, epee::json_rpc::error &er)
->>>>>>> v0.7.6:src/wallet/monero_wallet_full.cpp
   {
     for (const auto & ptx : ptx_vector)
     {
@@ -792,14 +750,10 @@ namespace monero {
     wallet2_listener(monero_wallet_full& wallet, tools::wallet2& wallet2) : m_wallet(wallet), m_w2(wallet2) {
       this->m_sync_start_height = boost::none;
       this->m_sync_end_height = boost::none;
-      //TODO adjust balance types 
+      //TODO adjust balance types
       m_prev_balance = wallet.get_balance();
       m_prev_unlocked_balance = wallet.get_unlocked_balance();
-<<<<<<< HEAD:src/wallet/monero_wallet_core.cpp
-
-=======
       m_notification_pool = std::unique_ptr<tools::threadpool>(tools::threadpool::getNewForUnitTests(1));  // TODO (monero-project): utility can be for general use
->>>>>>> v0.7.6:src/wallet/monero_wallet_full.cpp
     }
 
     ~wallet2_listener() {
@@ -872,24 +826,10 @@ namespace monero {
     void on_unconfirmed_money_received(uint64_t height, const crypto::hash &txid, const cryptonote::transaction& cn_tx, uint64_t amount, const cryptonote::subaddress_index& subaddr_index) override {
       if (m_wallet.get_listeners().empty()) return;
 
-<<<<<<< HEAD:src/wallet/monero_wallet_core.cpp
-      // create library tx
-      std::shared_ptr<monero_tx_wallet> tx = std::static_pointer_cast<monero_tx_wallet>(monero_utils::cn_tx_to_tx(cn_tx, true));
-      tx->m_hash = epee::string_tools::pod_to_hex(txid);
-      tx->m_is_locked = true;
-      std::shared_ptr<monero_output_wallet> output = std::make_shared<monero_output_wallet>();
-      tx->m_outputs.push_back(output);
-      output->m_tx = tx;
-      output->m_amount = amount;
-      output->m_account_index = subaddr_index.major;
-      output->m_subaddress_index = subaddr_index.minor;
-      output->m_currency = "";
-=======
       // queue notification processing off main thread
       tools::threadpool::waiter waiter(*m_notification_pool);
       m_notification_pool->submit(&waiter, [this, height, txid, cn_tx, amount, subaddr_index]() {
         try {
->>>>>>> v0.7.6:src/wallet/monero_wallet_full.cpp
 
           // create library tx
           std::shared_ptr<monero_tx_wallet> tx = std::static_pointer_cast<monero_tx_wallet>(monero_utils::cn_tx_to_tx(cn_tx, true));
@@ -923,28 +863,6 @@ namespace monero {
       });
     }
 
-<<<<<<< HEAD:src/wallet/monero_wallet_core.cpp
-    void on_money_received(uint64_t height, const crypto::hash &txid, const cryptonote::transaction& cn_tx, uint64_t amount, const cryptonote::subaddress_index& subaddr_index, bool is_change, uint64_t unlock_height, std::string asset_type) override {
-      if (m_wallet.get_listeners().empty()) return;
-
-      // create native library tx
-      std::shared_ptr<monero_block> block = std::make_shared<monero_block>();
-      block->m_height = height;
-      // in the next line error is thrown
-      std::shared_ptr<monero_tx_wallet> tx = std::static_pointer_cast<monero_tx_wallet>(monero_utils::cn_tx_to_tx(cn_tx, true));
-      block->m_txs.push_back(tx);
-      tx->m_block = block;
-      tx->m_hash = epee::string_tools::pod_to_hex(txid);
-      tx->m_unlock_height = unlock_height;
-      tx->m_is_locked = true;
-      std::shared_ptr<monero_output_wallet> output = std::make_shared<monero_output_wallet>();
-      tx->m_outputs.push_back(output);
-      output->m_tx = tx;
-      output->m_amount = amount;
-      output->m_account_index = subaddr_index.major;
-      output->m_subaddress_index = subaddr_index.minor;
-      output->m_currency = asset_type;
-=======
     void on_money_received(uint64_t height, const crypto::hash &txid, const cryptonote::transaction& cn_tx, uint64_t amount, uint64_t burnt, const cryptonote::subaddress_index& subaddr_index, bool is_change, uint64_t unlock_height) override {
       if (m_wallet.get_listeners().empty()) return;
 
@@ -952,7 +870,6 @@ namespace monero {
       tools::threadpool::waiter waiter(*m_notification_pool);
       m_notification_pool->submit(&waiter, [this, height, txid, cn_tx, amount, burnt, subaddr_index, is_change, unlock_height]() {
         try {
->>>>>>> v0.7.6:src/wallet/monero_wallet_full.cpp
 
           // create native library tx
           std::shared_ptr<monero_block> block = std::make_shared<monero_block>();
@@ -971,15 +888,10 @@ namespace monero {
           output->m_account_index = subaddr_index.major;
           output->m_subaddress_index = subaddr_index.minor;
 
-<<<<<<< HEAD:src/wallet/monero_wallet_core.cpp
-      // notify if balances changed
-      check_for_changed_funds(asset_type);
-=======
           // notify listeners of output
           for (monero_wallet_listener* listener : m_wallet.get_listeners()) {
             listener->on_output_received(*output);
           }
->>>>>>> v0.7.6:src/wallet/monero_wallet_full.cpp
 
           // watch for unlock
           m_prev_locked_tx_hashes.insert(tx->m_hash.get());
@@ -998,29 +910,6 @@ namespace monero {
       if (m_wallet.get_listeners().empty()) return;
       if (&cn_tx_in != &cn_tx_out) throw std::runtime_error("on_money_spent() in tx is different than out tx");
 
-<<<<<<< HEAD:src/wallet/monero_wallet_core.cpp
-      // create native library tx
-      std::shared_ptr<monero_block> block = std::make_shared<monero_block>();
-      block->m_height = height;
-      std::shared_ptr<monero_tx_wallet> tx = std::static_pointer_cast<monero_tx_wallet>(monero_utils::cn_tx_to_tx(cn_tx_in, true));
-      block->m_txs.push_back(tx);
-      tx->m_block = block;
-      tx->m_hash = epee::string_tools::pod_to_hex(txid);
-      std::shared_ptr<monero_output_wallet> output = std::make_shared<monero_output_wallet>();
-      tx->m_inputs.push_back(output);
-      output->m_tx = tx;
-      output->m_amount = amount;
-      output->m_account_index = subaddr_index.major;
-      output->m_subaddress_index = subaddr_index.minor;
-      output->m_currency = asset_type;
-      // notify listeners of output
-      for (monero_wallet_listener* listener : m_wallet.get_listeners()) {
-        listener->on_output_spent(*output);
-      }
-
-      // notify if balances changed
-      check_for_changed_funds(asset_type);
-=======
       // queue notification processing off main thread
       tools::threadpool::waiter waiter(*m_notification_pool);
       m_notification_pool->submit(&waiter, [this, height, txid, cn_tx_in, amount, cn_tx_out, subaddr_index]() {
@@ -1046,7 +935,6 @@ namespace monero {
           for (monero_wallet_listener* listener : m_wallet.get_listeners()) {
             listener->on_output_spent(*output);
           }
->>>>>>> v0.7.6:src/wallet/monero_wallet_full.cpp
 
           // watch for unlock
           m_prev_locked_tx_hashes.insert(tx->m_hash.get());
@@ -1085,7 +973,6 @@ namespace monero {
     tools::wallet2& m_w2;         // internal wallet implementation to listen to
     boost::optional<uint64_t> m_sync_start_height;
     boost::optional<uint64_t> m_sync_end_height;
-<<<<<<< HEAD:src/wallet/monero_wallet_core.cpp
     std::map<std::string, uint64_t> m_prev_balance;
     std::map<std::string, uint64_t> m_prev_unlocked_balance;
     std::vector<std::shared_ptr<monero_tx_wallet>> m_locked_txs;
@@ -1107,7 +994,7 @@ namespace monero {
       auto iter4 = m_current_unlocked_balance.find(asset_type.get());
 
       if (iter1->second != iter2->second || iter3->second != iter4->second) {
-        
+
         on_balances_changed(iter2->second, iter4->second, asset_type.get());
         balance_changed = true;
       }
@@ -1122,7 +1009,7 @@ namespace monero {
           auto iter4 = m_current_unlocked_balance.find(asset_type_in_list);
 
           if (iter1->second != iter2->second || iter3->second != iter4->second) {
-        
+
             on_balances_changed(iter2->second, iter4->second, asset_type_in_list);
             balance_changed = true;
           }
@@ -1134,7 +1021,7 @@ namespace monero {
           m_prev_balance = m_wallet.get_balance();
           m_prev_unlocked_balance = m_wallet.get_unlocked_balance();
         }
-     
+
   /*     if (m_prev_balance != m_wallet.get_balance() || m_prev_unlocked_balance != m_wallet.get_unlocked_balance()) {
         on_balances_changed(m_wallet.get_balance(), m_wallet.get_unlocked_balance());
         m_prev_balance = m_wallet.get_balance();
@@ -1147,24 +1034,6 @@ namespace monero {
       if (m_wallet.get_listeners().empty()) return;
       for (monero_wallet_listener* listener : m_wallet.get_listeners()) {
         listener->on_balances_changed(new_balance, new_unlocked_balance, asset_type);
-=======
-    boost::mutex m_listener_mutex;
-    uint64_t m_prev_balance;
-    uint64_t m_prev_unlocked_balance;
-    std::set<std::string> m_prev_locked_tx_hashes;
-    std::unique_ptr<tools::threadpool> m_notification_pool;  // threadpool of size 1 to queue notifications for external announcement
-
-    bool check_for_changed_balances() {
-      uint64_t balance = m_wallet.get_balance();
-      uint64_t unlocked_balance = m_wallet.get_unlocked_balance();
-      if (balance != m_prev_balance || unlocked_balance != m_prev_unlocked_balance) {
-        m_prev_balance = balance;
-        m_prev_unlocked_balance = unlocked_balance;
-        for (monero_wallet_listener* listener : m_wallet.get_listeners()) {
-          listener->on_balances_changed(balance, unlocked_balance);
-        }
-        return true;
->>>>>>> v0.7.6:src/wallet/monero_wallet_full.cpp
       }
       return false;
     }
@@ -1218,7 +1087,7 @@ namespace monero {
 
       // notify spent outputs
       if (tx->m_outgoing_transfer != boost::none) {
-        
+
         // build dummy input for notification // TODO: this provides one input with outgoing amount like monero-wallet-rpc client, use real inputs instead
         std::shared_ptr<monero_output_wallet> input = std::make_shared<monero_output_wallet>();
         input->m_amount = tx->m_outgoing_transfer.get()->m_amount.get() + tx->m_fee.get();
@@ -1236,7 +1105,7 @@ namespace monero {
           block_notify->m_height = tx->get_height();
           block_notify->m_txs.push_back(tx_notify);
         }
-        
+
         // notify listeners
         for (monero_wallet_listener* listener : m_wallet.get_listeners()) listener->on_output_spent(*input);
       }
@@ -1692,7 +1561,7 @@ namespace monero {
     if (result == 0) result = get_daemon_height(); // TODO monero-project: target height can be 0 when daemon is synced.  Use blockchain height instead
     return result;
   }
-  
+
   uint64_t monero_wallet_full::get_height_by_date(uint16_t year, uint8_t month, uint8_t day) const {
     return m_w2->get_blockchain_height_by_date(year, month, day);
   }
@@ -1829,7 +1698,7 @@ namespace monero {
     if (!m_w2->get_pricing_record(pr, bc_height-1)) {
        throw std::runtime_error("failed to get pricing record. Make sure you are connected to a daemon.");
     }
-    
+
     // calculate current block cap
     uint64_t block_cap = cryptonote::get_block_cap(supply_amounts, pr);
     return block_cap;
@@ -1857,7 +1726,7 @@ namespace monero {
     if (!m_w2->get_pricing_record(pr, bc_height-1)) {
        throw std::runtime_error("failed to get pricing record. Make sure you are connected to a daemon.");
     }
-    
+
     uint64_t collateral;
     if (!cryptonote::get_collateral_requirements(tx_type, amount, collateral, pr, supply_amounts)) {
        throw std::runtime_error("failed to calculate collateral requirement. Make sure you are connected to a daemon.");
@@ -1881,27 +1750,11 @@ namespace monero {
     } else {
        throw std::runtime_error(err);
     }
-   
+
   }
 
   // isMultisigImportNeeded
 
-<<<<<<< HEAD:src/wallet/monero_wallet_core.cpp
-  std::map<std::string, uint64_t> monero_wallet_core::get_balance() const {
-    return m_w2->balance_all(STRICT);
-  }
-
-  std::map<uint32_t, std::map<std::string, uint64_t>> monero_wallet_core::get_balance(uint32_t account_idx) const {
-    return m_w2->balance(account_idx, STRICT);
-  }
-
-   uint64_t monero_wallet_core::get_balance(const std::string& asset_type, uint32_t account_idx) const {
-    return m_w2->balance(asset_type, account_idx, STRICT);
-  }
-
-  uint64_t monero_wallet_core::get_balance(const std::string& asset_type, uint32_t account_idx, uint32_t subaddress_idx) const {
-    std::map<uint32_t, uint64_t> balance_per_subaddress = m_w2->balance_per_subaddress(asset_type, account_idx, STRICT);
-=======
   uint64_t monero_wallet_full::get_balance() const {
     return m_w2->balance_all(STRICT_);
   }
@@ -1912,27 +1765,10 @@ namespace monero {
 
   uint64_t monero_wallet_full::get_balance(uint32_t account_idx, uint32_t subaddress_idx) const {
     std::map<uint32_t, uint64_t> balance_per_subaddress = m_w2->balance_per_subaddress(account_idx, STRICT_);
->>>>>>> v0.7.6:src/wallet/monero_wallet_full.cpp
     auto iter = balance_per_subaddress.find(subaddress_idx);
     return iter == balance_per_subaddress.end() ? 0 : iter->second;
   }
 
-<<<<<<< HEAD:src/wallet/monero_wallet_core.cpp
-  std::map<std::string, uint64_t> monero_wallet_core::get_unlocked_balance() const {
-    return m_w2->unlocked_balance_all(STRICT);
-  }
-
-   std::map<uint32_t, std::map<std::string, uint64_t>> monero_wallet_core::get_unlocked_balance(uint32_t account_idx) const {
-    return m_w2->unlocked_balance(account_idx, STRICT);
-  }
-
-    uint64_t monero_wallet_core::get_unlocked_balance(const std::string& asset_type, uint32_t account_idx) const {
-    return m_w2->unlocked_balance(asset_type, account_idx, STRICT);
-  }
-
-  uint64_t monero_wallet_core::get_unlocked_balance(const std::string& asset_type, uint32_t account_idx, uint32_t subaddress_idx) const {
-    std::map<uint32_t, std::pair<uint64_t, std::pair<uint64_t, uint64_t>>> unlocked_balance_per_subaddress = m_w2->unlocked_balance_per_subaddress(asset_type, account_idx, STRICT);
-=======
   uint64_t monero_wallet_full::get_unlocked_balance() const {
     return m_w2->unlocked_balance_all(STRICT_);
   }
@@ -1943,7 +1779,6 @@ namespace monero {
 
   uint64_t monero_wallet_full::get_unlocked_balance(uint32_t account_idx, uint32_t subaddress_idx) const {
     std::map<uint32_t, std::pair<uint64_t, std::pair<uint64_t, uint64_t>>> unlocked_balance_per_subaddress = m_w2->unlocked_balance_per_subaddress(account_idx, STRICT_);
->>>>>>> v0.7.6:src/wallet/monero_wallet_full.cpp
     auto iter = unlocked_balance_per_subaddress.find(subaddress_idx);
     return iter == unlocked_balance_per_subaddress.end() ? 0 : iter->second.first;
   }
@@ -1961,24 +1796,8 @@ namespace monero {
       monero_account account;
       account.m_index = account_idx;
       account.m_primary_address = get_address(account_idx, 0);
-<<<<<<< HEAD:src/wallet/monero_wallet_core.cpp
-
-      std::map<uint32_t, std::map<std::string, uint64_t>> balances = m_w2->balance(account_idx, STRICT);
-      std::map<uint32_t, std::map<std::string, uint64_t>> unlocked_balances = m_w2->unlocked_balance(account_idx, STRICT);
-      std::map<std::string, uint64_t> balance_total, unlocked_balance_total;
-
-      for (auto &balance : balances) {
-        for (auto &asset : balance.second) {
-          balance_total[asset.first] += asset.second;
-          unlocked_balance_total[asset.first] += unlocked_balances[balance.first][asset.first];
-        }
-      }
-      account.m_balance = balance_total;
-      account.m_unlocked_balance = unlocked_balance_total;
-=======
       account.m_balance = m_w2->balance(account_idx, STRICT_);
       account.m_unlocked_balance = m_w2->unlocked_balance(account_idx, STRICT_);
->>>>>>> v0.7.6:src/wallet/monero_wallet_full.cpp
       if (include_subaddresses) account.m_subaddresses = get_subaddresses_aux(account_idx, std::vector<uint32_t>(), transfers);
       accounts.push_back(account);
     }
@@ -1997,7 +1816,6 @@ namespace monero {
     monero_account account;
     account.m_index = account_idx;
     account.m_primary_address = get_address(account_idx, 0);
-<<<<<<< HEAD:src/wallet/monero_wallet_core.cpp
 
 
     std::map<uint32_t, std::map<std::string, uint64_t>> balances = m_w2->balance(account_idx, STRICT);
@@ -2013,10 +1831,6 @@ namespace monero {
 
     account.m_balance = balance_total;
     account.m_unlocked_balance = unlocked_balance_total;
-=======
-    account.m_balance = m_w2->balance(account_idx, STRICT_);
-    account.m_unlocked_balance = m_w2->unlocked_balance(account_idx, STRICT_);
->>>>>>> v0.7.6:src/wallet/monero_wallet_full.cpp
     if (include_subaddresses) account.m_subaddresses = get_subaddresses_aux(account_idx, std::vector<uint32_t>(), transfers);
     return account;
   }
@@ -2064,7 +1878,7 @@ namespace monero {
   std::vector<std::shared_ptr<monero_tx_wallet>> monero_wallet_full::get_txs() const {
     return get_txs(monero_tx_query());
   }
-  
+
   std::vector<std::shared_ptr<monero_tx_wallet>> monero_wallet_full::get_txs(const monero_tx_query& query) const {
     std::vector<std::string> missing_tx_hashes;
     std::vector<std::shared_ptr<monero_tx_wallet>> txs = get_txs(query, missing_tx_hashes);
@@ -2386,11 +2200,11 @@ namespace monero {
     std::string err;
     uint64_t bc_height = m_w2->get_daemon_blockchain_height(err);
 
-    if (tx_type != tt::OFFSHORE_TRANSFER && tx_type != tt::XASSET_TRANSFER && tx_type != tt::TRANSFER) 
+    if (tx_type != tt::OFFSHORE_TRANSFER && tx_type != tt::XASSET_TRANSFER && tx_type != tt::TRANSFER)
     {
       unlock_time = bc_height + locked_blocks;
     }
-    
+
     // prepare transactions
     std::vector<wallet2::pending_tx> ptx_vector = m_w2->create_transactions_2(dsts, mixin, source_currency, destination_currency, tx_type, unlock_time, priority, extra, account_index, subaddress_indices);
     if (ptx_vector.empty()) throw std::runtime_error("No transaction created");
@@ -2421,12 +2235,7 @@ namespace monero {
     std::list<std::string> tx_hashes;
     std::list<std::string> tx_blobs;
     std::list<std::string> tx_metadatas;
-<<<<<<< HEAD:src/wallet/monero_wallet_core.cpp
     if (!fill_response(m_w2.get(), ptx_vector, get_tx_keys, tx_keys, tx_amounts, tx_amounts_usd, tx_amounts_xasset, tx_amounts_change, tx_amounts_collateral, tx_fees, tx_weights, multisig_tx_hex, unsigned_tx_hex, !relay, tx_hashes, get_tx_hex, tx_blobs, get_tx_metadata, tx_metadatas, er)) {
-=======
-    std::list<key_image_list> input_key_images_list;
-    if (!fill_response(m_w2.get(), ptx_vector, get_tx_keys, tx_keys, tx_amounts, tx_fees, tx_weights, multisig_tx_hex, unsigned_tx_hex, !relay, tx_hashes, get_tx_hex, tx_blobs, get_tx_metadata, tx_metadatas, input_key_images_list, err)) {
->>>>>>> v0.7.6:src/wallet/monero_wallet_full.cpp
       throw std::runtime_error("need to handle error filling response!");  // TODO
     }
 
@@ -2460,7 +2269,7 @@ namespace monero {
       std::shared_ptr<monero_outgoing_transfer> out_transfer = std::make_shared<monero_outgoing_transfer>();
       tx->m_outgoing_transfer = out_transfer;
       out_transfer->m_amount = (source_currency == "XHV")? *tx_amounts_iter : (source_currency == "XUSD")?  *tx_amounts_usd_iter : *tx_amounts_xasset_iter;
-      out_transfer->m_currency = source_currency; 
+      out_transfer->m_currency = source_currency;
 
       // for exchanges create incoming tx ( even if not send to yourself, to extract counter value later)
       if (tx_type != tt::TRANSFER && tx_type != tt::OFFSHORE_TRANSFER && tx_type != tt::XASSET_TRANSFER) {
@@ -2584,7 +2393,7 @@ namespace monero {
         }
       }
     }
- 
+
     // sweep from each account and collect resulting txs
     std::vector<std::shared_ptr<monero_tx_wallet>> txs;
     for (std::pair<uint32_t, std::vector<uint32_t>> subaddress_indices_pair : indices) {
@@ -2611,7 +2420,7 @@ namespace monero {
           txs.insert(std::end(txs), std::begin(account_txs), std::end(account_txs));
         }
       }
-    } 
+    }
 
     // notify listeners of spent funds
     if (config.m_relay != boost::none && config.m_relay.get()) m_w2_listener->on_spend_txs(txs);
@@ -2693,12 +2502,7 @@ namespace monero {
     std::list<std::string> tx_hashes;
     std::list<std::string> tx_blobs;
     std::list<std::string> tx_metadatas;
-<<<<<<< HEAD:src/wallet/monero_wallet_core.cpp
     if (!fill_response(m_w2.get(), ptx_vector, get_tx_keys, tx_keys, tx_amounts, tx_amounts_usd, tx_amounts_xasset, tx_amounts_change, tx_amounts_collateral, tx_fees, tx_weights, multisig_tx_hex, unsigned_tx_hex, !relay, tx_hashes, get_tx_hex, tx_blobs, get_tx_metadata, tx_metadatas, err)) {
-=======
-    std::list<key_image_list> input_key_images_list;
-    if (!fill_response(m_w2.get(), ptx_vector, get_tx_keys, tx_keys, tx_amounts, tx_fees, tx_weights, multisig_tx_hex, unsigned_tx_hex, !relay, tx_hashes, get_tx_hex, tx_blobs, get_tx_metadata, tx_metadatas, input_key_images_list, err)) {
->>>>>>> v0.7.6:src/wallet/monero_wallet_full.cpp
       throw std::runtime_error("need to handle error filling response!");  // TODO
     }
 
@@ -2842,12 +2646,7 @@ namespace monero {
     std::list<std::string> tx_hashes;
     std::list<std::string> tx_blobs;
     std::list<std::string> tx_metadatas;
-<<<<<<< HEAD:src/wallet/monero_wallet_core.cpp
     if (!fill_response(m_w2.get(), ptx_vector, get_tx_keys, tx_keys, tx_amounts, tx_amounts_usd,tx_amounts_xasset, tx_amounts_change, tx_amounts_collateral, tx_fees, tx_weights, multisig_tx_hex, unsigned_tx_hex, !relay, tx_hashes, get_tx_hex, tx_blobs, get_tx_metadata, tx_metadatas, err)) {
-=======
-    std::list<key_image_list> input_key_images_list;
-    if (!fill_response(m_w2.get(), ptx_vector, get_tx_keys, tx_keys, tx_amounts, tx_fees, tx_weights, multisig_tx_hex, unsigned_tx_hex, !relay, tx_hashes, get_tx_hex, tx_blobs, get_tx_metadata, tx_metadatas, input_key_images_list, err)) {
->>>>>>> v0.7.6:src/wallet/monero_wallet_full.cpp
       throw std::runtime_error("need to handle error filling response!");  // TODO: return err message
     }
 
@@ -2958,11 +2757,7 @@ namespace monero {
     std::list<std::string> tx_metadatas;
     std::list<key_image_list> input_key_images_list;
     epee::json_rpc::error er;
-<<<<<<< HEAD:src/wallet/monero_wallet_core.cpp
     if (!fill_response(m_w2.get(), ptx_vector, get_tx_keys, tx_keys, tx_amounts, tx_amounts_usd, tx_amounts_xasset, tx_amounts_change, tx_amounts_collateral, tx_fees, tx_weights, multisig_tx_hex, unsigned_tx_hex, !relay, tx_hashes, get_tx_hex, tx_blobs, get_tx_metadata, tx_metadatas, er)) {
-=======
-    if (!fill_response(m_w2.get(), ptx_vector, get_tx_keys, tx_keys, tx_amounts, tx_fees, tx_weights, multisig_tx_hex, unsigned_tx_hex, !relay, tx_hashes, get_tx_hex, tx_blobs, get_tx_metadata, tx_metadatas, input_key_images_list, er)) {
->>>>>>> v0.7.6:src/wallet/monero_wallet_full.cpp
       throw std::runtime_error("need to handle error filling response!");  // TODO: return err message
     }
 
@@ -3431,7 +3226,7 @@ namespace monero {
   std::shared_ptr<monero_check_tx> monero_wallet_full::check_tx_proof(const std::string& tx_hash, const std::string& address, const std::string& message, const std::string& signature) const {
     MTRACE("monero_wallet_full::check_tx_proof()");
 
-    //TODO implement for xAssets 
+    //TODO implement for xAssets
     // validate and parse tx hash
    /*  crypto::hash _tx_hash;
     if (!epee::string_tools::hex_to_pod(tx_hash, _tx_hash)) {
@@ -4221,13 +4016,8 @@ namespace monero {
     std::vector<monero_subaddress> subaddresses;
 
     // get balances per subaddress as maps
-<<<<<<< HEAD:src/wallet/monero_wallet_core.cpp
-    std::map<uint32_t, std::map<std::string, uint64_t>> balance_per_subaddress = m_w2->balance(account_idx, STRICT);
-    std::map<uint32_t, std::map<std::string, uint64_t>> unlocked_balance_per_subaddress = m_w2->unlocked_balance(account_idx, STRICT);
-=======
     std::map<uint32_t, uint64_t> balance_per_subaddress = m_w2->balance_per_subaddress(account_idx, STRICT_);
     std::map<uint32_t, std::pair<uint64_t, std::pair<uint64_t, uint64_t>>> unlocked_balance_per_subaddress = m_w2->unlocked_balance_per_subaddress(account_idx, STRICT_);
->>>>>>> v0.7.6:src/wallet/monero_wallet_full.cpp
 
     // get all indices if no indices given
     std::vector<uint32_t> subaddress_indices_req;
