@@ -402,16 +402,15 @@ std::shared_ptr<monero_tx> monero_utils::cn_tx_to_tx(const cryptonote::transacti
     output->m_tx = tx;
     tx->m_outputs.push_back(output);
     output->m_amount = cnVout.amount;
-<<<<<<< HEAD
-   
-    
+
+
     if (cnVout.target.type() == typeid(txout_to_key))
-    { 
+    {
       const crypto::public_key& cnStealthPublicKey = boost::get < txout_to_key > (cnVout.target).key;
       output->m_stealth_public_key = epee::string_tools::pod_to_hex(cnStealthPublicKey);
       output->m_currency = "XHV";
     }
-    else if (cnVout.target.type() == typeid(txout_offshore))  
+    else if (cnVout.target.type() == typeid(txout_offshore))
     {
       const crypto::public_key& cnStealthPublicKey = boost::get < txout_offshore > (cnVout.target).key;
       output->m_stealth_public_key = epee::string_tools::pod_to_hex(cnStealthPublicKey);
@@ -423,10 +422,6 @@ std::shared_ptr<monero_tx> monero_utils::cn_tx_to_tx(const cryptonote::transacti
       output->m_stealth_public_key = epee::string_tools::pod_to_hex(cnStealthPublicKey);
       output->m_currency = boost::get < txout_xasset > (cnVout.target).asset_type;
     }
-=======
-    const crypto::public_key& cnStealthPublicKey = boost::get<txout_to_tagged_key>(cnVout.target).key;
-    output->m_stealth_public_key = epee::string_tools::pod_to_hex(cnStealthPublicKey);
->>>>>>> v0.7.6
   }
 
   return tx;

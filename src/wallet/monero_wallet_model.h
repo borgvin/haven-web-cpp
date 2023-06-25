@@ -53,6 +53,7 @@
 #pragma once
 
 #include "daemon/monero_daemon_model.h"
+#include <map>
 
 using namespace monero;
 
