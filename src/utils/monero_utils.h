@@ -57,7 +57,7 @@
 
 #include "wallet/monero_wallet_model.h"
 #include "cryptonote_basic/cryptonote_basic.h"
-#include "serialization/keyvalue_serialization.h"	// TODO: consolidate with other binary deps?
+#include "serialization/keyvalue_serialization.h" // TODO: consolidate with other binary deps?
 #include "storages/portable_storage.h"
 
 /**
@@ -67,12 +67,19 @@ namespace monero_utils
 {
   using namespace cryptonote;
 
-  // ------------------------ CONSTANTS ---------------------------
+  // ------------------------------ CONSTANTS ---------------------------------
 
   static const int RING_SIZE = 12;  // network-enforced ring size
 
-  // ------------------------ BINARY SERIALIZATION ----------------------------
+  // -------------------------------- UTILS -----------------------------------
 
+  monero_integrated_address get_integrated_address(monero_network_type network_type, const std::string& standard_address, const std::string& payment_id);
+  bool is_valid_address(const std::string& address, monero_network_type network_type);
+  bool is_valid_private_view_key(const std::string& private_view_key);
+  bool is_valid_private_spend_key(const std::string& private_spend_key);
+  void validate_address(const std::string& address, monero_network_type network_type);
+  void validate_private_view_key(const std::string& private_view_key);
+  void validate_private_spend_key(const std::string& private_spend_key);
   void json_to_binary(const std::string &json, std::string &bin);
   void binary_to_json(const std::string &bin, std::string &json);
   void binary_blocks_to_json(const std::string &bin, std::string &json);
@@ -81,11 +88,19 @@ namespace monero_utils
 
   std::string serialize(const rapidjson::Document& doc);
 
-  void addJsonMember(std::string key, uint8_t val, rapidjson::Document::AllocatorType& allocator, rapidjson::Value& root, rapidjson::Value& field);
-  void addJsonMember(std::string key, uint32_t val, rapidjson::Document::AllocatorType& allocator, rapidjson::Value& root, rapidjson::Value& field);
-  void addJsonMember(std::string key, uint64_t val, rapidjson::Document::AllocatorType& allocator, rapidjson::Value& root, rapidjson::Value& field);
-  void addJsonMember(std::string key, std::string val, rapidjson::Document::AllocatorType& allocator, rapidjson::Value& root, rapidjson::Value& field);
-  void addJsonMember(std::string key, bool val, rapidjson::Document::AllocatorType& allocator, rapidjson::Value& root);
+  /**
+   * Add number, string, and boolean json members using template specialization.
+   *
+   * TODO: add_json_member("key", "val", ...) treated as integer instead of string literal
+   */
+  template <class T>
+  void add_json_member(std::string key, T val, rapidjson::Document::AllocatorType& allocator, rapidjson::Value& root, rapidjson::Value& field) {
+    rapidjson::Value field_key(key.c_str(), key.size(), allocator);
+    field.SetInt64((uint64_t) val);
+    root.AddMember(field_key, field, allocator);
+  }
+  void add_json_member(std::string key, std::string val, rapidjson::Document::AllocatorType& allocator, rapidjson::Value& root, rapidjson::Value& field);
+  void add_json_member(std::string key, bool val, rapidjson::Document::AllocatorType& allocator, rapidjson::Value& root);
 
   // TODO: template implementation here, could move to monero_utils.hpp per https://stackoverflow.com/questions/3040480/c-template-function-compiles-in-header-but-not-implementation
   template <class T> rapidjson::Value to_rapidjson_val(rapidjson::Document::AllocatorType& allocator, const std::vector<std::shared_ptr<T>>& vals) {
@@ -131,18 +146,18 @@ namespace monero_utils
   bool is_valid_language(const std::string& language);
 
   /**
-   * Convert a Monero Core cryptonote::block to a block in this library's native model.
+   * Convert a cryptonote::block to a block in this library's native model.
    *
-   * @param cn_block is the Core block to convert
+   * @param cn_block is the block to convert
    * @return a block in this library's native model
    */
   std::shared_ptr<monero_block> cn_block_to_block(const cryptonote::block& cn_block);
 
   /**
-   * Convert a Monero Core crpytonote::transaction to a transaction in this library's
+   * Convert a cryptonote::transaction to a transaction in this library's
    * native model.
    *
-   * @param cn_tx is the Core transaction to convert
+   * @param cn_tx is the transaction to convert
    * @param init_as_tx_wallet specifies if a monero_tx xor monero_tx_wallet should be initialized
    */
   std::shared_ptr<monero_tx> cn_tx_to_tx(const cryptonote::transaction& cn_tx, bool init_as_tx_wallet = false);

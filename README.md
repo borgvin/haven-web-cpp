@@ -1,6 +1,6 @@
 # Monero C++ Library
 
-A C++ library for creating Haven applications.
+A C++ library for creating Monero applications using native bindings to [monero v0.18.1.2 'Flourine Fermie'](https://github.com/monero-project/monero/tree/v0.18.1.2).
 
 * Supports fully client-side wallets by wrapping [wallet2.h](https://github.com/monero-project/monero/blob/master/src/wallet/wallet2.h).
 * Supports multisig, view-only, and offline wallets.
@@ -12,22 +12,18 @@ A C++ library for creating Haven applications.
 ## Table of contents
 
 * [Sample code](#sample-code)
+* [Documentation](#documentation)
 * [Using this library in your project](#using-this-library-in-your-project)
-* [Developer guide](#developer-guide)
-* [See also](#see-also)
+* [Related projects](#related-projects)
 * [License](#license)
 * [Donations](#donations)
 
 ## Sample code
 
-This code introduces the API.  See the [documentation](https://moneroecosystem.org/monero-cpp/annotated.html) or [specification PDF](http://moneroecosystem.org/monero-java/monero-spec.pdf) for more details.
-
-_Note: This API might change depending on feedback, such as changing structs to classes, using pure object-oriented accessors and mutators, not using boost::optional with shared_ptrs, etc.  Feedback is welcome._
-
 ```c++
 // create a wallet from a mnemonic phrase
 string mnemonic = "hefty value later extra artistic firm radar yodel talent future fungal nutshell because sanity awesome nail unjustly rage unafraid cedar delayed thumbs comb custom sanity";
-monero_wallet* wallet_restored = monero_wallet_core::create_wallet_from_mnemonic(
+monero_wallet* wallet_restored = monero_wallet_full::create_wallet_from_mnemonic(
     "MyWalletRestored",                   // wallet path and name
     "supersecretpassword123",             // wallet password
     monero_network_type::STAGENET,        // network type
@@ -79,7 +75,7 @@ output_query.m_is_spent = false;
 vector<shared_ptr<monero_output_wallet>> outputs = wallet_restored->get_outputs(output_query);
 
 // create and sync a new wallet with a random mnemonic phrase
-monero_wallet* wallet_random = monero_wallet_core::create_wallet_random(
+monero_wallet* wallet_random = monero_wallet_full::create_wallet_random(
     "MyWalletRandom",                     // wallet path and name
     "supersecretpassword123",             // wallet password
     monero_network_type::STAGENET,        // network type
@@ -90,8 +86,8 @@ monero_wallet* wallet_random = monero_wallet_core::create_wallet_random(
     "English");
 wallet_random->sync();
 
-// continuously synchronize the wallet in the background
-wallet_random->start_syncing();
+// synchronize in the background every 5 seconds
+wallet_random->start_syncing(5000);
 
 // get wallet info
 string random_mnemonic = wallet_random->get_mnemonic();
@@ -99,14 +95,17 @@ string random_primary = wallet_random->get_primary_address();
 uint64_t random_height = wallet_random->get_height();
 bool random_is_synced = wallet_random->is_synced();
 
-// receive notifications when the wallet receives funds
+// receive notifications when funds are received, confirmed, and unlocked
 struct : monero_wallet_listener {
   void on_output_received(const monero_output_wallet& output) {
     cout << "Wallet received funds!" << endl;
+    uint64_t amount = output.m_amount.get();
     string tx_hash = output.m_tx->m_hash.get();
+    bool is_confirmed = output.m_tx->m_is_confirmed.get();
+    bool is_locked = dynamic_pointer_cast<monero_tx_wallet>(output.m_tx)->m_is_locked.get();
     int account_index = output.m_account_index.get();
     int subaddress_index = output.m_subaddress_index.get();
-    OUTPUT_RECEIVED = true;
+    FUNDS_RECEIVED = true;
   }
 } my_listener;
 wallet_random->add_listener(my_listener);
@@ -148,12 +147,18 @@ config.m_destinations = destinations;
 // create the transaction, confirm with the user, and relay to the network
 shared_ptr<monero_tx_wallet> created_tx = wallet_restored->create_tx(config);
 uint64_t fee = created_tx->m_fee.get(); // "Are you sure you want to send ...?"
-wallet_restored->relay_tx(*created_tx); // recipient receives notification within 10 seconds
+wallet_restored->relay_tx(*created_tx); // recipient receives notification within 5 seconds
 
 // save and close the wallets
 wallet_restored->close(true);
 wallet_random->close(true);
 ```
+
+## Documentation
+
+* [API documentation](https://moneroecosystem.org/monero-cpp/annotated.html)
+* [API and model overview with visual diagrams](https://moneroecosystem.org/monero-java/monero-spec.pdf)
+* [monero-javascript documentation](https://github.com/monero-ecosystem/monero-javascript#documentation) provides additional documentation which translates to monero-cpp
 
 ## Using this library in your project
 
@@ -161,41 +166,79 @@ This project may be compiled as part of another application or built as a shared
 
 For example, [monero-java](https://github.com/monero-ecosystem/monero-java) compiles this project to a shared library to support Java JNI bindings, while [monero-javascript](https://github.com/monero-ecosystem/monero-javascript) compiles this project to WebAssembly binaries.
 
-1. Set up dependencies
-	1. Set up Boost
-		1. Download and extract the boost 1.72.0 source code zip from https://www.boost.org/users/download/ to ./external/boost-sdk/.
-		2. `cd ./external/boost-sdk/`
-		3. `./bootstrap.sh`
-		4. `./b2`
-	2. Set up OpenSSL
-		1. Download and extract the OpenSSL 1.1.1 source code zip from https://github.com/openssl/openssl/tree/OpenSSL_1_1_1 to ./external/openssl-sdk/.
-		2. Build for your system.<br>
-       Unix: `./config && make`
-	3. Set up hidapi
-		1. Download the latest hidapi source code from https://github.com/signal11/hidapi.
-		2. Build hidapi for your system.<br>
-       Mac requires autoreconf: `brew install automake`
-		3. Copy libhidapi.a to ./external-libs/hidapi.
-	4. Set up libsodium
-		1. Build libsodium for your system.
-		2. Copy libsodium.a to ./external-libs/libsodium.<br>
-       Mac: installed through homebrew at /usr/local/Cellar/libsodium/1.0.17/lib/libsodium.a
-	5. Set up monero-project/monero:
-		1. Update submodules: `./bin/update_submodules.sh`
-		2. `cd ./external/monero-core`
-		3. Modify CMakeLists.txt: `option(BUILD_GUI_DEPS "Build GUI dependencies." ON)`
-		4. Run twice to create libwallet_merged.a in addition to other .a libraries: `make release-static -j8`
-2. Link to this library's source files in your application or build as a shared library in `./build/`: `./bin/build_libmonero_cpp.sh`
-       
-These build steps aspire to be automated further.  [Any help is greatly appreciated](https://github.com/monero-ecosystem/monero-cpp/issues/1).
+### Building monero-cpp on Mac & Linux
 
-## Developer guide
+1. If building this library standalone instead of as a submodule in another project, clone the project repository and update its submodules:
+    1. `git clone --recurse-submodules https://github.com/monero-ecosystem/monero-cpp.git`
+    2. `cd ./monero-cpp && ./bin/update_submodules.sh`
+2. Install [monero-project dependencies](https://github.com/monero-project/monero#dependencies) for your system. For example, on Ubuntu:<br>
+    1. `sudo apt update && sudo apt install build-essential cmake pkg-config libssl-dev libzmq3-dev libsodium-dev libunwind8-dev liblzma-dev libreadline6-dev libpgm-dev qttools5-dev-tools libhidapi-dev libusb-1.0-0-dev libprotobuf-dev protobuf-compiler libudev-dev libboost-chrono-dev libboost-date-time-dev libboost-filesystem-dev libboost-locale-dev libboost-program-options-dev libboost-regex-dev libboost-serialization-dev libboost-system-dev libboost-thread-dev python3 ccache`
+    2. Install expat (dependency of unbound):
 
-Refer to [monero-javascript's developer guide](https://github.com/monero-ecosystem/monero-javascript#developer-guide) which mostly translates to this C++ library.
+         ```
+         cd ~
+         wget https://github.com/libexpat/libexpat/releases/download/R_2_4_8/expat-2.4.8.tar.bz2
+         tar -xf expat-2.4.8.tar.bz2
+         sudo rm expat-2.4.8.tar.bz2
+         cd expat-2.4.8
+         ./configure --enable-static --disable-shared
+         make
+         sudo make install
+         cd ../
+         ```
+     3. Install unbound:
 
-## See also
+         ```
+         cd ~
+         wget https://www.nlnetlabs.nl/downloads/unbound/unbound-1.17.0.tar.gz
+         tar xzf unbound-1.17.0.tar.gz
+         sudo apt update
+         sudo apt install -y build-essential
+         sudo apt install -y libssl-dev
+         sudo apt install -y libexpat1-dev
+         sudo apt-get install -y bison
+         sudo apt-get install -y flex
+         cd unbound-1.17.0
+         ./configure --with-libexpat=/usr --with-ssl=/usr
+         make
+         sudo make install
+         cd ../
+         ```
+3. `export MONERO_CPP=path/to/monero-cpp`
+4. `cd $MONERO_CPP/external/monero-project`
+5. Build monero-project to create .a libraries, e.g.: `make release-static -j8`
+6. Link to this library's source files in your application or build as a shared library in ./build/: `cd $MONERO_CPP && ./bin/build_libmonero_cpp.sh`
 
-* [API specification](http://moneroecosystem.org/monero-java/monero-spec.pdf)
+### Building libmonero-cpp.dll on Windows
+
+1. Download and install [MSYS2](https://www.msys2.org/).
+2. Press the Windows button and launch `MSYS2 MINGW64` for 64 bit systems or `MSYS2 MINGW32` for 32 bit.
+3. Update packages: `pacman -Syu` and `pacman -Syy`
+4. Relaunch MSYS2 (if necessary) and install dependencies:
+
+    For 64 bit:
+
+     ```
+     pacman -S mingw-w64-x86_64-toolchain make mingw-w64-x86_64-cmake mingw-w64-x86_64-boost mingw-w64-x86_64-openssl mingw-w64-x86_64-zeromq mingw-w64-x86_64-libsodium mingw-w64-x86_64-hidapi mingw-w64-x86_64-unbound mingw-w64-x86_64-protobuf git mingw-w64-x86_64-libusb make gettext base-devel
+     ```
+
+     For 32 bit:
+
+     ```
+     pacman -S  mingw-w64-i686-toolchain make mingw-w64-i686-cmake mingw-w64-i686-boost mingw-w64-i686-openssl mingw-w64-i686-zeromq mingw-w64-i686-libsodium mingw-w64-i686-hidapi mingw-w64-i686-unbound mingw-w64-i686-protobuf git mingw-w64-i686-libusb make gettext base-devel
+     ```
+5. Clone repo if installing standalone (skip if building as part of another repo like monero-java or monero-javascript): `git clone --recursive https://github.com/monero-ecosystem/monero-cpp.git`
+6. Update submodules: `cd <path/to/monero-cpp> && ./bin/update_submodules.sh`
+7. `cd ./external/monero-project`
+9. Build monero-project:
+
+    For 64 bit: `make release-static-win64`
+
+    For 32 bit: `make release-static-win32`
+10. Build as a shared library in ./build/: `cd ../../ && ./bin/build_libmonero_cpp_dll.sh`
+
+## Related projects
+
 * [monero-java](https://github.com/monero-ecosystem/monero-java)
 * [monero-javascript](https://github.com/monero-ecosystem/monero-javascript)
 

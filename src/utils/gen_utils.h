@@ -54,15 +54,16 @@
 #ifndef gen_utils_h
 #define gen_utils_h
 
+#include <boost/lexical_cast.hpp>
 #include "include_base_utils.h"
 #include "common/util.h"
 
 /**
- * Collection of utilities for working with Monero's binary portable storage format.
+ * Collection of generic utilities.
  */
 namespace gen_utils
 {
-  // ------------------------- VALUE RECONCILATION- ---------------------------
+  // ------------------------- VALUE RECONCILATION ----------------------------
 
   // TODO: refactor common template code
   template <class T, typename std::enable_if<std::is_same<T, std::string>::value, T>::type* = nullptr>
@@ -77,7 +78,7 @@ namespace gen_utils
       else return val1 == boost::none ? val2 : val1;
     }
 
-    throw std::runtime_error(std::string("Cannot reconcile strings: ") + to_string(val1) + std::string(" vs ") + to_string(val2) + (!err_msg.empty() ? std::string(". ") + err_msg : std::string("")));
+    throw std::runtime_error(std::string("Cannot reconcile strings: ") + boost::lexical_cast<std::string>(val1) + std::string(" vs ") + boost::lexical_cast<std::string>(val2) + (!err_msg.empty() ? std::string(". ") + err_msg : std::string("")));
   }
   template <class T, typename std::enable_if<std::is_same<T, std::string>::value, T>::type* = nullptr>
   boost::optional<T> reconcile(const boost::optional<T>& val1, const boost::optional<T>& val2, const std::string& err_msg = "") {
@@ -96,39 +97,16 @@ namespace gen_utils
       else return val1 == boost::none ? val2 : val1;
     }
 
-    // resolve different numbers
-    if (resolve_max != boost::none) {
-      return *resolve_max ? std::max(*val1, *val2) : std::min(*val1, *val2);
-    }
+    // resolve different booleans
+    if (resolve_true != boost::none) return (bool) val1 == *resolve_true ? val1 : val2; // if resolve true, return true, else return false
 
-    // throw std::runtime_error("Cannot reconcile values " + val1 + " and " + val2 + " with config: [" + resolve_defined + ", " + resolve_true + ", " + resolve_max + "]", val1, val2);
-    throw std::runtime_error(std::string("Cannot reconcile integrals: ") + to_string(val1) + std::string(" vs ") + to_string(val2) + (!err_msg.empty() ? std::string(". ") + err_msg : std::string("")));
+    // resolve different numbers
+    if (resolve_max != boost::none) return *resolve_max ? std::max(*val1, *val2) : std::min(*val1, *val2);
+
+    // cannot reconcile
+    throw std::runtime_error(std::string("Cannot reconcile integrals: ") + boost::lexical_cast<std::string>(val1) + std::string(" vs ") + boost::lexical_cast<std::string>(val2) + (!err_msg.empty() ? std::string(". ") + err_msg : std::string("")));
   }
   template <class T, typename std::enable_if<std::is_integral<T>::value, T>::type* = nullptr>
-  boost::optional<T> reconcile(const boost::optional<T>& val1, const boost::optional<T>& val2, const std::string& err_msg = "") {
-    return reconcile(val1, val2, boost::none, boost::none, boost::none, err_msg);
-  }
-
-  template <class T, typename std::enable_if<std::is_same<T, bool>::value, T>::type>
-  boost::optional<T> reconcile(const boost::optional<T>& val1, const boost::optional<T>& val2, boost::optional<bool> resolve_defined, boost::optional<bool> resolve_true, boost::optional<bool> resolve_max, const std::string& err_msg = "") {
-
-    // check for equality
-    if (val1 == val2) return val1;
-
-    // resolve one value none
-    if (val1 == boost::none || val2 == boost::none) {
-      if (resolve_defined != boost::none && *resolve_defined == false) return boost::none;
-      else return val1 == boost::none ? val2 : val1;
-    }
-
-    // resolve different booleans
-    if (resolve_true != boost::none) {
-      return val1 == resolve_true ? val1 : val2; // if resolve true, return true, else return false
-    } else {
-      throw std::runtime_error(std::string("Cannot reconcile booleans: ") + to_string(val1) + std::string(" vs ") + to_string(val2) + (!err_msg.empty() ? std::string(". ") + err_msg : std::string("")));
-    }
-  }
-  template <class T, typename std::enable_if<std::is_same<T, bool>::value, T>::type>
   boost::optional<T> reconcile(const boost::optional<T>& val1, const boost::optional<T>& val2, const std::string& err_msg = "") {
     return reconcile(val1, val2, boost::none, boost::none, boost::none, err_msg);
   }

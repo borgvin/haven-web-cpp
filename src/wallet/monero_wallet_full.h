@@ -60,7 +60,7 @@
 #include <boost/thread/condition_variable.hpp>
 
 /**
- * Implements a monero_wallet.h by wrapping wallet2.h.
+ * Implements a monero_wallet.h by wrapping monero-project's wallet2.
  */
 namespace monero {
 
@@ -72,9 +72,9 @@ namespace monero {
   // --------------------------- STATIC WALLET UTILS --------------------------
 
   /**
-   * Monero wallet implmentation which uses monero-project's wallet2.
+   * Monero wallet implementation which uses monero-project's wallet2.
    */
-  class monero_wallet_core : public monero_wallet {
+  class monero_wallet_full : public monero_wallet {
 
   public:
 
@@ -94,7 +94,7 @@ namespace monero {
      * @param network_type is the wallet's network type
      * @return a pointer to the wallet instance
      */
-    static monero_wallet_core* open_wallet(const std::string& path, const std::string& password, const monero_network_type network_type);
+    static monero_wallet_full* open_wallet(const std::string& path, const std::string& password, const monero_network_type network_type);
 
     /**
      * Open an in-memory wallet from existing data buffers.
@@ -107,7 +107,16 @@ namespace monero {
      * @param http_client_factory allows use of custom http clients
      * @return a pointer to the wallet instance
      */
-    static monero_wallet_core* open_wallet_data(const std::string& password, const monero_network_type, const std::string& keys_data, const std::string& cache_data, const monero_rpc_connection& daemon_connection = monero_rpc_connection(), std::unique_ptr<epee::net_utils::http::http_client_factory> http_client_factory = nullptr);
+    static monero_wallet_full* open_wallet_data(const std::string& password, const monero_network_type, const std::string& keys_data, const std::string& cache_data, const monero_rpc_connection& daemon_connection = monero_rpc_connection(), std::unique_ptr<epee::net_utils::http::http_client_factory> http_client_factory = nullptr);
+
+    /**
+     * Create a new wallet with the given configuration.
+     *
+     * @param config is the wallet configuration
+     * @param http_client_factory allows use of custom http clients
+     * @return a pointer to the wallet instance
+     */
+    static monero_wallet_full* create_wallet(const monero_wallet_config& config, std::unique_ptr<epee::net_utils::http::http_client_factory> http_client_factory = nullptr);
 
     /**
      * Create a new wallet with a randomly generated seed.
@@ -120,7 +129,8 @@ namespace monero {
      * @param http_client_factory allows use of custom http clients
      * @return a pointer to the wallet instance
      */
-    static monero_wallet_core* create_wallet_random(const std::string& path, const std::string& password, const monero_network_type network_type, const monero_rpc_connection& daemon_connection = monero_rpc_connection(), const std::string& language = "English", std::unique_ptr<epee::net_utils::http::http_client_factory> http_client_factory = nullptr);
+    [[deprecated("monero_wallet_full::create_wallet_random() is deprecated and will be removed soon. Use monero_wallet_full::create_wallet(config) instead")]]
+    static monero_wallet_full* create_wallet_random(const std::string& path, const std::string& password, const monero_network_type network_type, const monero_rpc_connection& daemon_connection = monero_rpc_connection(), const std::string& language = "English", std::unique_ptr<epee::net_utils::http::http_client_factory> http_client_factory = nullptr);
 
     /**
      * Create a wallet from an existing mnemonic phrase.
@@ -134,7 +144,8 @@ namespace monero {
      * @param http_client_factory allows use of custom http clients
      * @return a pointer to the wallet instance
      */
-    static monero_wallet_core* create_wallet_from_mnemonic(const std::string& path, const std::string& password, const monero_network_type network_type, const std::string& mnemonic, const monero_rpc_connection& daemon_connection = monero_rpc_connection(), uint64_t restore_height = 0, const std::string& seed_offset = "", std::unique_ptr<epee::net_utils::http::http_client_factory> http_client_factory = nullptr);
+    [[deprecated("monero_wallet_full::create_wallet_from_mnemonic() is deprecated and will be removed soon. Use monero_wallet_full::create_wallet(config) instead")]]
+    static monero_wallet_full* create_wallet_from_mnemonic(const std::string& path, const std::string& password, const monero_network_type network_type, const std::string& mnemonic, const monero_rpc_connection& daemon_connection = monero_rpc_connection(), uint64_t restore_height = 0, const std::string& seed_offset = "", std::unique_ptr<epee::net_utils::http::http_client_factory> http_client_factory = nullptr);
 
     /**
      * Create a wallet from an address, view key, and spend key.
@@ -151,7 +162,8 @@ namespace monero {
      * @param http_client_factory allows use of custom http clients
      * @return a pointer to the wallet instance
      */
-    static monero_wallet_core* create_wallet_from_keys(const std::string& path, const std::string& password, const monero_network_type network_type, const std::string& address, const std::string& view_key, const std::string& spend_key, const monero_rpc_connection& daemon_connection = monero_rpc_connection(), uint64_t restore_height = 0, const std::string& language = "English", std::unique_ptr<epee::net_utils::http::http_client_factory> http_client_factory = nullptr);
+    [[deprecated("monero_wallet_full::create_wallet_from_keys() is deprecated and will be removed soon. Use monero_wallet_full::create_wallet(config) instead")]]
+    static monero_wallet_full* create_wallet_from_keys(const std::string& path, const std::string& password, const monero_network_type network_type, const std::string& address, const std::string& view_key, const std::string& spend_key, const monero_rpc_connection& daemon_connection = monero_rpc_connection(), uint64_t restore_height = 0, const std::string& language = "English", std::unique_ptr<epee::net_utils::http::http_client_factory> http_client_factory = nullptr);
 
     /**
      * Get a list of available languages for the wallet's mnemonic phrase.
@@ -165,7 +177,7 @@ namespace monero {
     /**
      * Destruct the wallet.
      */
-    ~monero_wallet_core();
+    ~monero_wallet_full();
 
     /**
      * Supported wallet methods.
@@ -174,7 +186,7 @@ namespace monero {
     void set_daemon_connection(const std::string& uri, const std::string& username = "", const std::string& password = "") override;
     void set_daemon_connection(const boost::optional<monero_rpc_connection>& connection) override;
     boost::optional<monero_rpc_connection> get_daemon_connection() const override;
-    bool is_connected() const override;
+    bool is_connected_to_daemon() const override;
     bool is_daemon_synced() const override;
     bool is_daemon_trusted() const override;
     bool is_synced() const override;
@@ -204,8 +216,9 @@ namespace monero {
     monero_sync_result sync(monero_wallet_listener& listener) override;
     monero_sync_result sync(uint64_t start_height) override;
     monero_sync_result sync(uint64_t start_height, monero_wallet_listener& listener) override;
-    void start_syncing() override;
+    void start_syncing(uint64_t sync_period_in_ms) override;
     void stop_syncing() override;
+    void scan_txs(const std::vector<std::string>& tx_hashes) override;
     void rescan_spent() override;
     void rescan_blockchain() override;
     std::vector<std::pair<std::string, std::string>> get_circulating_supply() const override;
@@ -230,20 +243,23 @@ namespace monero {
     std::vector<std::shared_ptr<monero_tx_wallet>> get_txs(const monero_tx_query& query, std::vector<std::string>& missing_tx_hashes) const override;
     std::vector<std::shared_ptr<monero_transfer>> get_transfers(const monero_transfer_query& query) const override;
     std::vector<std::shared_ptr<monero_output_wallet>> get_outputs(const monero_output_query& query) const override;
-    std::string get_outputs_hex() const override;
-    int import_outputs_hex(const std::string& outputs_hex) override;
-    std::vector<std::shared_ptr<monero_key_image>> get_key_images() const override;
+    std::string export_outputs(bool all = false) const override;
+    int import_outputs(const std::string& outputs_hex) override;
+    std::vector<std::shared_ptr<monero_key_image>> export_key_images(bool all = false) const override;
     std::shared_ptr<monero_key_image_import_result> import_key_images(const std::vector<std::shared_ptr<monero_key_image>>& key_images) override;
+    void freeze_output(const std::string& key_image) override;
+    void thaw_output(const std::string& key_image) override;
+    bool is_output_frozen(const std::string& key_image) override;
     std::vector<std::shared_ptr<monero_tx_wallet>> create_txs(const monero_tx_config& config) override;
     std::vector<std::shared_ptr<monero_tx_wallet>> sweep_unlocked(const monero_tx_config& config) override;
     std::shared_ptr<monero_tx_wallet> sweep_output(const monero_tx_config& config) override;
     std::vector<std::shared_ptr<monero_tx_wallet>> sweep_dust(bool relay = false) override;
     std::vector<std::string> relay_txs(const std::vector<std::string>& tx_metadatas) override;
-    monero_tx_set parse_tx_set(const monero_tx_set& tx_set) override;
+    monero_tx_set describe_tx_set(const monero_tx_set& tx_set) override;
     std::string sign_txs(const std::string& unsigned_tx_hex) override;
     std::vector<std::string> submit_txs(const std::string& signed_tx_hex) override;
-    std::string sign_message(const std::string& msg) const override;
-    bool verify_message(const std::string& msg, const std::string& address, const std::string& signature) const override;
+    std::string sign_message(const std::string& msg, monero_message_signature_type signature_type, uint32_t account_idx = 0, uint32_t subaddress_idx = 0) const override;
+    monero_message_signature_result verify_message(const std::string& msg, const std::string& address, const std::string& signature) const override;
     std::string get_tx_key(const std::string& tx_hash) const override;
     std::shared_ptr<monero_check_tx> check_tx_key(const std::string& tx_hash, const std::string& txKey, const std::string& address) const override;
     std::string get_tx_proof(const std::string& tx_hash, const std::string& address, const std::string& message) const override;
@@ -261,7 +277,7 @@ namespace monero {
     uint64_t add_address_book_entry(const std::string& address, const std::string& description) override;
     void edit_address_book_entry(uint64_t index, bool set_address, const std::string& address, bool set_description, const std::string& description) override;
     void delete_address_book_entry(uint64_t index) override;
-    std::string create_payment_uri(const monero_tx_config& config) const override;
+    std::string get_payment_uri(const monero_tx_config& config) const override;
     std::shared_ptr<monero_tx_config> parse_payment_uri(const std::string& uri) const override;
     bool get_attribute(const std::string& key, std::string& value) const override;
     void set_attribute(const std::string& key, const std::string& val) override;
@@ -271,14 +287,15 @@ namespace monero {
     bool is_multisig_import_needed() const override;
     monero_multisig_info get_multisig_info() const override;
     std::string prepare_multisig() override;
-    monero_multisig_init_result make_multisig(const std::vector<std::string>& multisig_hexes, int threshold, const std::string& password) override;
+    std::string make_multisig(const std::vector<std::string>& multisig_hexes, int threshold, const std::string& password) override;
     monero_multisig_init_result exchange_multisig_keys(const std::vector<std::string>& mutisig_hexes, const std::string& password) override;
-    std::string get_multisig_hex() override;
+    std::string export_multisig_hex() override;
     int import_multisig_hex(const std::vector<std::string>& multisig_hexes) override;
     monero_multisig_sign_result sign_multisig_tx_hex(const std::string& multisig_tx_hex) override;
     std::vector<std::string> submit_multisig_tx_hex(const std::string& signed_multisig_tx_hex) override;
+    void change_password(const std::string& old_password, const std::string& new_password) override;
+    void move_to(const std::string& path, const std::string& password) override;
     void save() override;
-    void move_to(std::string path, std::string password) override;
     void close(bool save = false) override;
 
     /**
@@ -287,13 +304,17 @@ namespace monero {
     std::string get_keys_file_buffer(const epee::wipeable_string& password, bool view_only) const;
     std::string get_cache_file_buffer(const epee::wipeable_string& password) const;
 
-    // --------------------------------- PRIVATE --------------------------------
+  // ---------------------------------- PRIVATE ---------------------------------
 
   private:
     friend struct wallet2_listener;
     std::unique_ptr<tools::wallet2> m_w2;            // internal wallet implementation
     std::unique_ptr<wallet2_listener> m_w2_listener; // internal wallet implementation listener
     std::set<monero_wallet_listener*> m_listeners;   // external wallet listeners
+
+    static monero_wallet_full* create_wallet_from_mnemonic(const monero_wallet_config& config, std::unique_ptr<epee::net_utils::http::http_client_factory> http_client_factory);
+    static monero_wallet_full* create_wallet_from_keys(const monero_wallet_config& config, std::unique_ptr<epee::net_utils::http::http_client_factory> http_client_factory);
+    static monero_wallet_full* create_wallet_random(const monero_wallet_config& config, std::unique_ptr<epee::net_utils::http::http_client_factory> http_client_factory);
 
     void init_common();
     std::vector<monero_subaddress> get_subaddresses_aux(uint32_t account_idx, const std::vector<uint32_t>& subaddress_indices, const std::vector<tools::wallet2::transfer_details>& transfers) const;

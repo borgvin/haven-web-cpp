@@ -63,6 +63,36 @@ namespace monero {
 
 
   /**
+   * Configures a wallet to create.
+   */
+  struct monero_wallet_config : public serializable_struct {
+    boost::optional<std::string> m_path;
+    boost::optional<std::string> m_password;
+    boost::optional<monero_network_type> m_network_type;
+    boost::optional<std::string> m_server_uri;
+    boost::optional<std::string> m_server_username;
+    boost::optional<std::string> m_server_password;
+    boost::optional<std::string> m_mnemonic;
+    boost::optional<std::string> m_seed_offset;
+    boost::optional<std::string> m_primary_address;
+    boost::optional<std::string> m_private_view_key;
+    boost::optional<std::string> m_private_spend_key;
+    boost::optional<uint64_t> m_restore_height;
+    boost::optional<std::string> m_language;
+    boost::optional<bool> m_save_current;
+    boost::optional<uint64_t> m_account_lookahead;
+    boost::optional<uint64_t> m_subaddress_lookahead;
+
+    monero_wallet_config() {}
+    monero_wallet_config(const monero_wallet_config& config);
+    monero_wallet_config copy() const;
+    rapidjson::Value to_rapidjson_val(rapidjson::Document::AllocatorType& allocator) const;
+    static std::shared_ptr<monero_wallet_config> deserialize(const std::string& config_json);
+    void set_server(const monero_rpc_connection& server);
+    monero_rpc_connection get_server() const;
+  };
+
+  /**
    * Models a result of syncing a wallet.
    */
   struct monero_sync_result : public serializable_struct {
@@ -291,6 +321,7 @@ namespace monero {
     boost::optional<uint64_t> m_max_height;
     boost::optional<uint64_t> m_include_outputs;
     boost::optional<std::shared_ptr<monero_transfer_query>> m_transfer_query;
+    boost::optional<std::shared_ptr<monero_output_query>> m_input_query;
     boost::optional<std::shared_ptr<monero_output_query>> m_output_query;
 
     rapidjson::Value to_rapidjson_val(rapidjson::Document::AllocatorType& allocator) const;
@@ -306,8 +337,8 @@ namespace monero {
    * Groups transactions who share common hex data which is needed in order to
    * sign and submit the transactions.
    *
-   * For example, multisig transactions created from send_txs() share a common
-   * hex std::string which is needed in order to sign and submit the multisig
+   * For example, multisig transactions created from create_txs() share a common
+   * hex string which is needed in order to sign and submit the multisig
    * transactions.
    */
   struct monero_tx_set : public serializable_struct {
@@ -380,6 +411,26 @@ namespace monero {
     boost::optional<uint64_t> m_height;
     boost::optional<uint64_t> m_spent_amount;
     boost::optional<uint64_t> m_unspent_amount;
+
+    rapidjson::Value to_rapidjson_val(rapidjson::Document::AllocatorType& allocator) const;
+  };
+
+  /**
+   * Enumerates message verification results.
+   */
+  enum monero_message_signature_type : uint8_t {
+    SIGN_WITH_SPEND_KEY = 0,
+    SIGN_WITH_VIEW_KEY
+  };
+
+  /**
+   * Enumerates message verification results.
+   */
+  struct monero_message_signature_result : public serializable_struct {
+    bool m_is_good;
+    uint32_t m_version;
+    bool m_is_old;
+    monero_message_signature_type m_signature_type;
 
     rapidjson::Value to_rapidjson_val(rapidjson::Document::AllocatorType& allocator) const;
   };

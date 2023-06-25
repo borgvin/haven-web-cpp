@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
 # initialize submodules recursively
-git submodule update --init --recursive
+git submodule update --init --force --recursive
 
-# update monero-core
-cd ./external/monero-core
-git checkout tags/v0.16.0.3
-git pull --ff-only origin tags/v0.16.0.3
+# update monero-project
+cd ./external/monero-project
+git checkout master
+git pull --ff-only origin master
 cd ../../

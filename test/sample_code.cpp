@@ -1,11 +1,11 @@
 #include <stdio.h>
 #include <iostream>
 #include "wallet2.h"
-#include "wallet/monero_wallet_core.h"
+#include "wallet/monero_wallet_full.h"
 
 using namespace std;
 
-bool OUTPUT_RECEIVED = false;
+bool FUNDS_RECEIVED = false;
 
 /**
  * This code introduces the API.
@@ -21,7 +21,7 @@ int main(int argc, const char* argv[]) {
 
   // create a wallet from a mnemonic phrase
   string mnemonic = "hefty value later extra artistic firm radar yodel talent future fungal nutshell because sanity awesome nail unjustly rage unafraid cedar delayed thumbs comb custom sanity";
-  monero_wallet* wallet_restored = monero_wallet_core::create_wallet_from_mnemonic(
+  monero_wallet* wallet_restored = monero_wallet_full::create_wallet_from_mnemonic(
       "MyWalletRestored",                   // wallet path and name
       "supersecretpassword123",             // wallet password
       monero_network_type::STAGENET,        // network type
@@ -73,7 +73,7 @@ int main(int argc, const char* argv[]) {
   vector<shared_ptr<monero_output_wallet>> outputs = wallet_restored->get_outputs(output_query);
 
   // create and sync a new wallet with a random mnemonic phrase
-  monero_wallet* wallet_random = monero_wallet_core::create_wallet_random(
+  monero_wallet* wallet_random = monero_wallet_full::create_wallet_random(
       "MyWalletRandom",                     // wallet path and name
       "supersecretpassword123",             // wallet password
       monero_network_type::STAGENET,        // network type
@@ -84,8 +84,8 @@ int main(int argc, const char* argv[]) {
       "English");
   wallet_random->sync();
 
-  // continuously synchronize the wallet in the background
-  wallet_random->start_syncing();
+  // synchronize in the background every 5 seconds
+  wallet_random->start_syncing(5000);
 
   // get wallet info
   string random_mnemonic = wallet_random->get_mnemonic();
@@ -97,10 +97,13 @@ int main(int argc, const char* argv[]) {
   struct : monero_wallet_listener {
     void on_output_received(const monero_output_wallet& output) {
       cout << "Wallet received funds!" << endl;
+      uint64_t amount = output.m_amount.get();
       string tx_hash = output.m_tx->m_hash.get();
+      bool is_confirmed = output.m_tx->m_is_confirmed.get();
+      bool is_locked = static_pointer_cast<monero_tx_wallet>(output.m_tx)->m_is_locked.get();
       int account_index = output.m_account_index.get();
       int subaddress_index = output.m_subaddress_index.get();
-      OUTPUT_RECEIVED = true;
+      FUNDS_RECEIVED = true;
     }
   } my_listener;
   wallet_random->add_listener(my_listener);
@@ -142,10 +145,10 @@ int main(int argc, const char* argv[]) {
   // create the transaction, confirm with the user, and relay to the network
   shared_ptr<monero_tx_wallet> created_tx = wallet_restored->create_tx(config);
   uint64_t fee = created_tx->m_fee.get(); // "Are you sure you want to send ...?"
-  wallet_restored->relay_tx(*created_tx); // recipient receives notification within 10 seconds
+  wallet_restored->relay_tx(*created_tx); // recipient receives notification within 5 seconds
 
   // the recipient wallet will be notified
-  if (OUTPUT_RECEIVED) cout << "Sample code completed successfully" << endl;
+  if (FUNDS_RECEIVED) cout << "Sample code completed successfully" << endl;
   else throw runtime_error("Output should have been received");
 
   // save and close the wallets

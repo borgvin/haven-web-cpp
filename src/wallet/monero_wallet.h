@@ -66,7 +66,7 @@ namespace monero {
   // --------------------------------- LISTENERS ------------------------------
 
   /**
-   * Interface to receive wallet notifications..
+   * Interface to receive wallet notifications.
    */
   class monero_wallet_listener {
   public:
@@ -173,8 +173,8 @@ namespace monero {
      *
      * @return true if the wallet is connected to a daemon, false otherwise
      */
-    virtual bool is_connected() const {
-      throw std::runtime_error("is_connected() not supported");
+    virtual bool is_connected_to_daemon() const {
+      throw std::runtime_error("is_connected_to_daemon() not supported");
     }
 
     /**
@@ -460,9 +460,11 @@ namespace monero {
     }
 
     /**
-     * Start an asynchronous thread to continuously synchronize the wallet with the daemon.
+     * Start background synchronizing with a maximum period between syncs.
+     *
+     * @param syncPeriodInMs - maximum period between syncs in milliseconds
      */
-    virtual void start_syncing() {
+    virtual void start_syncing(uint64_t sync_period_in_ms = 10000) {
       throw std::runtime_error("start_syncing() not supported");
     }
 
@@ -471,6 +473,15 @@ namespace monero {
      */
     virtual void stop_syncing() {
       throw std::runtime_error("stop_syncing() not supported");
+    }
+
+    /**
+     * Scan transactions by their hash/id.
+     *
+     * @param txHashes - tx hashes to scan
+     */
+    virtual void scan_txs(const std::vector<std::string>& tx_hashes) {
+      throw std::runtime_error("scan_txs() not supported");
     }
 
     /**
@@ -812,12 +823,13 @@ namespace monero {
     }
 
     /**
-     * Export all outputs in hex format.
+     * Export outputs in hex format.
      *
-     * @return all outputs in hex format, empty std::string if no outputs
+     * @param all - export all outputs if true, else export outputs since the last export
+     * @return outputs in hex format, empty std::string if no outputs
      */
-    virtual std::string get_outputs_hex() const {
-      throw std::runtime_error("get_outputs_hex() not supported");
+    virtual std::string export_outputs(bool all = false) const {
+      throw std::runtime_error("export_outputs() not supported");
     }
 
     /**
@@ -826,17 +838,18 @@ namespace monero {
      * @param outputs_hex are outputs in hex format
      * @return the number of outputs imported
      */
-    virtual int import_outputs_hex(const std::string& outputs_hex) {
-      throw std::runtime_error("import_outputs_hex() not supported");
+    virtual int import_outputs(const std::string& outputs_hex) {
+      throw std::runtime_error("import_outputs() not supported");
     }
 
     /**
-     * Get all signed key images.
+     * Export signed key images.
      *
+     * @param all - export all key images if true, else export key images since the last export
      * @return the wallet's signed key images
      */
-    virtual std::vector<std::shared_ptr<monero_key_image>> get_key_images() const {
-      throw std::runtime_error("get_key_images() not supported");
+    virtual std::vector<std::shared_ptr<monero_key_image>> export_key_images(bool all = false) const {
+      throw std::runtime_error("export_key_images() not supported");
     }
 
     /**
@@ -847,6 +860,34 @@ namespace monero {
      */
     virtual std::shared_ptr<monero_key_image_import_result> import_key_images(const std::vector<std::shared_ptr<monero_key_image>>& key_images) {
       throw std::runtime_error("import_key_images() not supported");
+    }
+
+    /**
+     * Freeze an output.
+     *
+     * @param key_image key image of the output to freeze
+     */
+    virtual void freeze_output(const std::string& key_image) {
+      throw std::runtime_error("freeze_output() not supported");
+    }
+
+    /**
+     * Thaw a frozen output.
+     *
+     * @param key_image key image of the output to thaw
+     */
+    virtual void thaw_output(const std::string& key_image) {
+      throw std::runtime_error("thaw_output() not supported");
+    }
+
+    /**
+     * Check if an output is frozen.
+     *
+     * @param key_image key image of the output to check if frozen
+     * @return true if the output is frozen, false otherwise
+     */
+    virtual bool is_output_frozen(const std::string& key_image) {
+      throw std::runtime_error("is_output_frozen() not supported");
     }
 
     /**
@@ -947,13 +988,13 @@ namespace monero {
     }
 
     /**
-     * Parses a tx set containing unsigned or multisig tx hex to a new tx set containing structured transactions.
+     * Describes a tx set containing unsigned or multisig tx hex to a new tx set containing structured transactions.
      *
      * @param tx_set is a tx set containing unsigned or multisig tx hex
-     * @return the parsed tx set containing structured transactions
+     * @return the tx set containing structured transactions
      */
-    virtual monero_tx_set parse_tx_set(const monero_tx_set& tx_set) {
-      throw std::runtime_error("parse_tx_set() not supported");
+    virtual monero_tx_set describe_tx_set(const monero_tx_set& tx_set) {
+      throw std::runtime_error("describe_tx_set() not supported");
     }
 
     /**
@@ -979,22 +1020,25 @@ namespace monero {
     /**
      * Sign a message.
      *
-     * @param msg is the message to sign
-     * @return the signature
+     * @param msg - the message to sign
+     * @param signature_type - sign with spend key or spend key
+     * @param account_idx - the account index of the message signature (default 0)
+     * @param subaddress_idx - the subaddress index of the message signature (default 0)
+     * @return the message signature
      */
-    virtual std::string sign_message(const std::string& msg) const {
+    virtual std::string sign_message(const std::string& msg, monero_message_signature_type signature_type, uint32_t account_idx = 0, uint32_t subaddress_idx = 0) const {
       throw std::runtime_error("sign_message() not supported");
     }
 
     /**
-     * Verify a signature on a message.
+     * Verify a message signature.
      *
-     * @param msg is the signed message
-     * @param address is the signing address
-     * @param signature is the signature
-     * @return true if the signature is good, false otherwise
+     * @param msg - the signed message
+     * @param address - signing address
+     * @param signature - signature
+     * @return the message signature result
      */
-    virtual bool verify_message(const std::string& msg, const std::string& address, const std::string& signature) const {
+    virtual monero_message_signature_result verify_message(const std::string& msg, const std::string& address, const std::string& signature) const {
       throw std::runtime_error("verify_message() not supported");
     }
 
@@ -1191,8 +1235,8 @@ namespace monero {
      * @param config specifies configuration for a potential tx
      * @return is the payment uri
      */
-    virtual std::string create_payment_uri(const monero_tx_config& config) const {
-      throw std::runtime_error("create_payment_uri() not supported");
+    virtual std::string get_payment_uri(const monero_tx_config& config) const {
+      throw std::runtime_error("get_payment_uri() not supported");
     }
 
     /**
@@ -1296,9 +1340,9 @@ namespace monero {
      * @param multisig_hexes are multisig hex from each participant
      * @param threshold is the number of signatures needed to sign transfers
      * @password is the wallet password
-     * @return the result which has the multisig's address xor this wallet's multisig hex to share with participants iff not N/N
+     * @return this wallet's multisig hex to share with participants
      */
-    virtual monero_multisig_init_result make_multisig(const std::vector<std::string>& multisig_hexes, int threshold, const std::string& password) {
+    virtual std::string make_multisig(const std::vector<std::string>& multisig_hexes, int threshold, const std::string& password) {
       throw std::runtime_error("make_multisig() not supported");
     }
 
@@ -1308,10 +1352,10 @@ namespace monero {
      * This process must be repeated with participants exactly N-M times.
      *
      * @param multisig_hexes are multisig hex from each participant
-     * @param password is the wallet's password // TODO monero core: redundant? wallet is created with password
+     * @param password is the wallet's password // TODO monero-project: redundant? wallet is created with password
      * @return the result which has the multisig's address xor this wallet's multisig hex to share with participants iff not done
      */
-    virtual  monero_multisig_init_result exchange_multisig_keys(const std::vector<std::string>& mutisig_hexes, const std::string& password) {
+    virtual monero_multisig_init_result exchange_multisig_keys(const std::vector<std::string>& mutisig_hexes, const std::string& password) {
       throw std::runtime_error("exchange_multisig_keys() not supported");
     }
 
@@ -1320,8 +1364,8 @@ namespace monero {
      *
      * @return this wallet's multisig info as hex for other participants
      */
-    virtual std::string get_multisig_hex() {
-      throw std::runtime_error("get_multisig_hex() not supported");
+    virtual std::string export_multisig_hex() {
+      throw std::runtime_error("export_multisig_hex() not supported");
     }
 
     /**
@@ -1359,10 +1403,13 @@ namespace monero {
     }
 
     /**
-     * Save the wallet at its current path.
+     * Change the wallet password.
+     *
+     * @param old_password is the wallet's old password
+     * @param new_password is the wallet's new password
      */
-    virtual void save() {
-      throw std::runtime_error("save() not supported");
+    virtual void change_password(const std::string& old_password, const std::string& new_password) {
+      throw std::runtime_error("change_password() not supported");
     }
 
     /**
@@ -1371,8 +1418,15 @@ namespace monero {
      * @param path is the new wallet's path
      * @param password is the new wallet's password
      */
-    virtual void move_to(std::string path, std::string password) {
+    virtual void move_to(const std::string& path, const std::string& password) {
       throw std::runtime_error("move_to() not supported");
+    }
+
+    /**
+     * Save the wallet at its current path.
+     */
+    virtual void save() {
+      throw std::runtime_error("save() not supported");
     }
 
     /**
