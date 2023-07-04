@@ -229,8 +229,8 @@ namespace monero {
     // set num values
     rapidjson::Value value_num(rapidjson::kNumberType);
     if (m_index != boost::none) monero_utils::add_json_member("index", m_index.get(), allocator, root, value_num);
-    if (m_balance != boost::none) monero_utils::add_json_member("balance", m_balance.get(), allocator, root, value_num);
-    if (m_unlocked_balance != boost::none) monero_utils::add_json_member("unlockedBalance", m_unlocked_balance.get(), allocator, root, value_num);
+    if (m_balance.empty()) root.AddMember("balance", monero_utils::to_rapidjson_val(allocator, m_balance), allocator);
+    if (m_unlocked_balance.empty()) root.AddMember("unlockedBalance", monero_utils::to_rapidjson_val( allocator, m_unlocked_balance), allocator);
 
     // set string values
     rapidjson::Value value_str(rapidjson::kStringType);
@@ -255,8 +255,8 @@ namespace monero {
     rapidjson::Value value_num(rapidjson::kNumberType);
     if (m_account_index != boost::none) monero_utils::add_json_member("accountIndex", m_account_index.get(), allocator, root, value_num);
     if (m_index != boost::none) monero_utils::add_json_member("index", m_index.get(), allocator, root, value_num);
-    if (m_balance != boost::none) monero_utils::add_json_member("balance", m_balance.get(), allocator, root, value_num);
-    if (m_unlocked_balance != boost::none) monero_utils::add_json_member("unlockedBalance", m_unlocked_balance.get(), allocator, root, value_num);
+    if (m_balance.empty()) root.AddMember("balance", monero_utils::to_rapidjson_val(allocator, m_balance), allocator);
+    if (m_unlocked_balance.empty()) root.AddMember("unlockedBalance", monero_utils::to_rapidjson_val( allocator, m_unlocked_balance), allocator);
     if (m_num_unspent_outputs != boost::none) monero_utils::add_json_member("numUnspentOutputs", m_num_unspent_outputs.get(), allocator, root, value_num);
     if (m_num_blocks_to_unlock) monero_utils::add_json_member("numBlocksToUnlock", m_num_blocks_to_unlock.get(), allocator, root, value_num);
 

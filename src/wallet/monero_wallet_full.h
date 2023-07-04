@@ -226,13 +226,15 @@ namespace monero {
     uint64_t get_collateral_requirements(const std::string& source_asset_type, const std::string& destination_asset_type, uint64_t amount) const override;
     uint64_t get_max_destination_amount(const std::string& source_asset_type, const std::string& destination_asset_type) const override;
     std::map<std::string, uint64_t> get_balance() const override;
-    std::map<uint32_t, std::map<std::string, uint64_t>> get_balance(uint32_t account_idx) const override;
+    uint64_t get_balance(const std::string& asset_type) const override;
     uint64_t get_balance(const std::string& asset_type, uint32_t account_idx) const override;
     uint64_t get_balance(const std::string& asset_type, uint32_t account_idx, uint32_t subaddress_idx) const override;
+    std::map<uint32_t, std::map<std::string, uint64_t>> get_balance_per_subaddress(uint32_t account_idx) const;
     std::map<std::string, uint64_t> get_unlocked_balance() const override;
-    std::map<uint32_t, std::map<std::string, uint64_t>> get_unlocked_balance(uint32_t account_idx) const override;
+    uint64_t get_unlocked_balance(const std::string& asset_type) const override;
     uint64_t get_unlocked_balance(const std::string& asset_type, uint32_t account_idx) const override;
     uint64_t get_unlocked_balance(const std::string& asset_type, uint32_t account_idx, uint32_t subaddress_idx) const override;
+    std::map<uint32_t, std::map<std::string, uint64_t>> get_unlocked_balance_per_subaddress(uint32_t account_idx) const;
     std::vector<monero_account> get_accounts(bool include_subaddresses, const std::string& tag) const override;
     monero_account get_account(const uint32_t account_idx, bool include_subaddresses) const override;
     monero_account create_account(const std::string& label = "") override;

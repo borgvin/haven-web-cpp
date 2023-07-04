@@ -550,21 +550,21 @@ namespace monero {
     }
 
     /**
-     * Get the wallet's balance.
+     * Get the wallet's balances.
      *
-     * @return the wallet's balance
+     * @return the wallet's balances
      */
     virtual std::map<std::string, uint64_t> get_balance() const {
       throw std::runtime_error("get_balance() not supported");
     }
 
     /**
-     * Get an account's balance of all asssets.
+     * Get balance of one asset.
      *
      * @param account_idx is the index of the account to get the balance of
      * @return the account's balance
      */
-    virtual std::map<uint32_t, std::map<std::string, uint64_t>> get_balance(uint32_t account_idx) const {
+    virtual uint64_t get_balance(const std::string& asset_type) const {
       throw std::runtime_error("get_balance() not supported");
     }
 
@@ -592,25 +592,24 @@ namespace monero {
     }
 
     /**
-     * Get the wallet's unlocked balance.
+     * Get unlocked balance of all assets.
      *
-     * @return the wallet's unlocked balance
+     * @return the unlocked balances
      */
     virtual std::map<std::string, uint64_t> get_unlocked_balance() const {
       throw std::runtime_error("get_unlocked_balance() not supported");
     }
 
     /**
-     * Get an account's unlocked balance of all assets.
+     * Get the wallet's unlocked balance of one asset.
      *
-     * @param account_idx is the index of the account to get the unlocked balance of
-     * @return the account's unlocked balance
+     * @return the wallet's unlocked balance
      */
-    virtual std::map<uint32_t, std::map<std::string, uint64_t>> get_unlocked_balance(uint32_t account_idx) const {
+    virtual uint64_t get_unlocked_balance(const std::string& asset_type) const {
       throw std::runtime_error("get_unlocked_balance() not supported");
     }
 
-        /**
+    /**
      * Get an account's unlocked balance of an asset.
      *
      * @param asset_type is the requested asset type
@@ -620,7 +619,6 @@ namespace monero {
     virtual uint64_t get_unlocked_balance(const std::string& asset_type, uint32_t account_idx) const {
       throw std::runtime_error("get_unlocked_balance() not supported");
     }
-
 
     /**
      * Get a subaddress's unlocked balance.
