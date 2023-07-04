@@ -18,7 +18,7 @@ endif()
 project(MoneroCppLibrary)
 
 set(BUILD_LIBRARY ON)
-set(BUILD_SAMPLE ON)
+set(BUILD_SAMPLE OFF)
 set(BUILD_SCRATCHPAD ON)
 
 ###################
