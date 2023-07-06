@@ -662,6 +662,10 @@ namespace monero {
     tgt->m_index = src->m_index;
     if (!src->m_ring_output_indices.empty()) tgt->m_ring_output_indices = std::vector<uint64_t>(src->m_ring_output_indices);
     tgt->m_stealth_public_key = src->m_stealth_public_key;
+    if (src->m_currency != boost::none) tgt->m_currency = src->m_currency;
+    if (src->m_unlock_time != boost::none) tgt->m_unlock_time = src->m_unlock_time;
+    if (src->m_is_collateral != boost::none) tgt->m_is_collateral = src->m_is_collateral;
+    if (src->m_is_collateral_change != boost::none) tgt->m_is_collateral_change = src->m_is_collateral_change;
     return tgt;
   }
 

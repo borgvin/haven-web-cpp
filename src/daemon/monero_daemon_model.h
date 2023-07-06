@@ -240,6 +240,9 @@ namespace monero {
     std::vector<uint64_t> m_ring_output_indices;
     boost::optional<std::string> m_stealth_public_key;
     boost::optional<std::string> m_currency;
+    boost::optional<uint64_t> m_unlock_time;
+    boost::optional<bool> m_is_collateral;
+    boost::optional<bool> m_is_collateral_change;
 
     rapidjson::Value to_rapidjson_val(rapidjson::Document::AllocatorType& allocator) const;
     static void from_property_tree(const boost::property_tree::ptree& node, const std::shared_ptr<monero_output>& output);

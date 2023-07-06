@@ -391,24 +391,46 @@ std::shared_ptr<monero_tx> monero_utils::cn_tx_to_tx(const cryptonote::transacti
       input->m_ring_output_indices = txin.key_offsets;
       cnKeyImage = txin.k_image;
     }
+    else if(cnVin.type() == typeid(txin_haven_key))
+    {
+      const txin_haven_key& txin = boost::get<txin_haven_key>(cnVin);
+      input->m_currency = txin.asset_type;
+      input->m_amount = txin.amount;
+      input->m_ring_output_indices = txin.key_offsets;
+      cnKeyImage = txin.k_image;
+    }
 
     input->m_key_image = std::make_shared<monero_key_image>();
     input->m_key_image.get()->m_hex = epee::string_tools::pod_to_hex(cnKeyImage);
   }
 
   // init outputs
-  for (const tx_out& cnVout : cn_tx.vout) {
+  //for (const tx_out& cnVout : cn_tx.vout) {
+  for (size_t i=0; i<cn_tx.vout.size(); ++i) {
+    const tx_out& cnVout = cn_tx.vout[i];
     std::shared_ptr<monero_output> output = init_as_tx_wallet ? std::make_shared<monero_output_wallet>() : std::make_shared<monero_output>();
     output->m_tx = tx;
     tx->m_outputs.push_back(output);
     output->m_amount = cnVout.amount;
-
-
+    if (cn_tx.output_unlock_times.size() == cn_tx.vout.size()) {
+      output->m_unlock_time = cn_tx.output_unlock_times[i];
+    } else {
+      output->m_unlock_time = cn_tx.unlock_time;
+    }
+    output->m_is_collateral = false;
+    output->m_is_collateral_change = false;
     if (cnVout.target.type() == typeid(txout_to_key))
     {
       const crypto::public_key& cnStealthPublicKey = boost::get < txout_to_key > (cnVout.target).key;
       output->m_stealth_public_key = epee::string_tools::pod_to_hex(cnStealthPublicKey);
       output->m_currency = "XHV";
+      if (cn_tx.collateral_indices.size()) {
+        output->m_is_collateral = (i == cn_tx.collateral_indices[0]);
+        output->m_is_collateral_change = (i == cn_tx.collateral_indices[1]);
+      } else {
+        output->m_is_collateral = false;
+        output->m_is_collateral_change = false;
+      }      
     }
     else if (cnVout.target.type() == typeid(txout_offshore))
     {
@@ -421,6 +443,24 @@ std::shared_ptr<monero_tx> monero_utils::cn_tx_to_tx(const cryptonote::transacti
       const crypto::public_key& cnStealthPublicKey = boost::get < txout_xasset > (cnVout.target).key;
       output->m_stealth_public_key = epee::string_tools::pod_to_hex(cnStealthPublicKey);
       output->m_currency = boost::get < txout_xasset > (cnVout.target).asset_type;
+    }
+    else if(cnVout.target.type() == typeid(txout_haven_key))
+    {
+      const crypto::public_key& cnStealthPublicKey = boost::get < txout_haven_key > (cnVout.target).key;
+      output->m_stealth_public_key = epee::string_tools::pod_to_hex(cnStealthPublicKey);
+      output->m_currency = boost::get < txout_haven_key > (cnVout.target).asset_type;
+      output->m_unlock_time = boost::get < txout_haven_key > (cnVout.target).unlock_time;
+      output->m_is_collateral = boost::get < txout_haven_key > (cnVout.target).is_collateral;
+      output->m_is_collateral_change = boost::get < txout_haven_key > (cnVout.target).is_collateral_change;
+    }
+    else if(cnVout.target.type() == typeid(txout_haven_tagged_key))
+    {
+      const crypto::public_key& cnStealthPublicKey = boost::get < txout_haven_tagged_key > (cnVout.target).key;
+      output->m_stealth_public_key = epee::string_tools::pod_to_hex(cnStealthPublicKey);
+      output->m_currency = boost::get < txout_haven_tagged_key > (cnVout.target).asset_type;
+      output->m_unlock_time = boost::get < txout_haven_tagged_key > (cnVout.target).unlock_time;
+      output->m_is_collateral = boost::get < txout_haven_tagged_key > (cnVout.target).is_collateral;
+      output->m_is_collateral_change = boost::get < txout_haven_tagged_key > (cnVout.target).is_collateral_change;
     }
   }
 
