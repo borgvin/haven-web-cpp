@@ -525,7 +525,7 @@ namespace monero {
    * anything other than (4) is temporary.
    */
   //------------------------------------------------------------------------------------------------------------------------------
-  bool validate_transfer(wallet2* m_w2, const std::list<wallet_rpc::transfer_destination>& destinations, const std::string& payment_id, std::vector<cryptonote::tx_destination_entry>& dsts, std::vector<uint8_t>& extra, bool at_least_one_destination, epee::json_rpc::error& er)
+  bool validate_transfer(wallet2* m_w2, const std::string& source_currency, const std::string& destination_currency, const std::list<wallet_rpc::transfer_destination>& destinations, const std::string& payment_id, std::vector<cryptonote::tx_destination_entry>& dsts, std::vector<uint8_t>& extra, bool at_least_one_destination, epee::json_rpc::error& er)
   {
     crypto::hash8 integrated_payment_id = crypto::null_hash8;
     std::string extra_nonce;
@@ -559,6 +559,7 @@ namespace monero {
       de.addr = info.address;
       de.is_subaddress = info.is_subaddress;
       de.amount = it->amount;
+      de.dest_asset_type = destination_currency;
       de.is_integrated = info.has_payment_id;
       dsts.push_back(de);
 
@@ -2244,7 +2245,7 @@ namespace monero {
     }
   }
 
-    if (!validate_transfer(m_w2.get(), tr_destinations, payment_id, dsts, extra, true, er)) {
+    if (!validate_transfer(m_w2.get(), source_currency, destination_currency, tr_destinations, payment_id, dsts, extra, true, er)) {
       throw std::runtime_error(er.message);
     }
 
@@ -2514,7 +2515,7 @@ namespace monero {
     std::vector<uint8_t> extra;
 
     epee::json_rpc::error err;
-    if (!validate_transfer(m_w2.get(), destination, payment_id, dsts, extra, true, err)) {
+    if (!validate_transfer(m_w2.get(), source_currency, destination_currency, destination, payment_id, dsts, extra, true, err)) {
       throw std::runtime_error("Failed to validate sweep_account transfer request");
     }
 
@@ -2636,6 +2637,12 @@ namespace monero {
     MTRACE("sweep_output()");
     //MTRACE("monero_tx_config: " << config.serialize());
 
+    if (config.source_currency == boost::none) throw std::runtime_error("Must specify source currency");
+    std::string source_currency = config.source_currency.get();
+
+    if (config.destination_currency == boost::none) throw std::runtime_error("Must specify destination currency");
+    std::string destination_currency = config.destination_currency.get();
+
     // validate input config
     std::vector<std::shared_ptr<monero_destination>> destinations = config.get_normalized_destinations();
     if (config.m_key_image == boost::none || config.m_key_image.get().empty()) throw std::runtime_error("Must provide key image of output to sweep");
@@ -2650,7 +2657,7 @@ namespace monero {
     destination.back().amount = 0;
     destination.back().address = destinations[0]->m_address.get();
     epee::json_rpc::error err;
-    if (!validate_transfer(m_w2.get(), destination, m_payment_id, dsts, extra, true, err)) {
+    if (!validate_transfer(m_w2.get(), source_currency, destination_currency, destination, m_payment_id, dsts, extra, true, err)) {
       //throw std::runtime_error(er);  // TODO
       throw std::runtime_error("Handle validate_transfer error!");
     }
