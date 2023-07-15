@@ -690,6 +690,7 @@ namespace monero {
 
     // set bool value
     if (m_is_collateral != boost::none) monero_utils::add_json_member("isCollateral", m_is_collateral.get(), allocator, root);
+    if (m_is_collateral_change != boost::none) monero_utils::add_json_member("isCollateralChange", m_is_collateral_change.get(), allocator, root);
     // return root
     return root;
   }
@@ -701,6 +702,8 @@ namespace monero {
       else if (key == std::string("amount")) destination->m_amount = it->second.get_value<uint64_t>();
       else if (key == std::string("isCollateral")) destination->m_is_collateral = it->second.get_value<bool>();
       else if (key == std::string("currency")) destination->m_currency = it->second.data();
+      else if (key == std::string("isCollateralChange")) destination->m_is_collateral_change = it->second.get_value<bool>();
+      
     }
   }
 
@@ -710,6 +713,7 @@ namespace monero {
     tgt->m_amount = src->m_amount;
     tgt->m_currency = src->m_currency;
     tgt->m_is_collateral = src->m_is_collateral;
+    tgt->m_is_collateral_change = src->m_is_collateral_change;
     return tgt;
   };
 
