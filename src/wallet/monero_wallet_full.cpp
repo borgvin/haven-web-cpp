@@ -250,7 +250,7 @@ namespace monero {
     // initialize destinations
     for (const auto &d: pd.m_dests) {
       std::shared_ptr<monero_destination> destination = std::make_shared<monero_destination>();
-      //destination->m_currency = d.asset_type;
+      destination->m_currency = d.dest_asset_type;
       destination->m_amount = d.amount;
       destination->m_address = d.address(m_w2.nettype(), pd.m_payment_id);
      // destination->m_is_collateral = d.is_collateral;
@@ -900,7 +900,7 @@ namespace monero {
       });
     }
 
-    void on_money_spent(uint64_t height, const crypto::hash &txid, const cryptonote::transaction& cn_tx_in, uint64_t amount, const cryptonote::transaction& cn_tx_out, const cryptonote::subaddress_index& subaddr_index) override {
+    void on_money_spent(uint64_t height, const crypto::hash &txid, const cryptonote::transaction& cn_tx_in, uint64_t amount, const cryptonote::transaction& cn_tx_out, const cryptonote::subaddress_index& subaddr_index, std::string asset_type) override {
       if (m_wallet.get_listeners().empty()) return;
       if (&cn_tx_in != &cn_tx_out) throw std::runtime_error("on_money_spent() in tx is different than out tx");
 
