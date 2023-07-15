@@ -144,8 +144,9 @@ namespace monero {
     boost::optional<std::string> m_currency;
     boost::optional<uint64_t> m_amount;
     boost::optional<bool> m_is_collateral;
+    boost::optional<bool> m_is_collateral_change;
 
-    monero_destination(boost::optional<std::string> address = boost::none, boost::optional<uint64_t> amount = boost::none, boost::optional<bool> is_collateral = boost::none, boost::optional<std::string> currency = boost::none) : m_address(address), m_amount(amount), m_is_collateral(is_collateral), m_currency(currency) {}
+    monero_destination(boost::optional<std::string> address = boost::none, boost::optional<uint64_t> amount = boost::none, boost::optional<bool> is_collateral = boost::none, boost::optional<bool> is_collateral_change = boost::none,  boost::optional<std::string> currency = boost::none) : m_address(address), m_amount(amount), m_is_collateral(is_collateral), m_is_collateral_change(is_collateral_change), m_currency(currency) {}
     rapidjson::Value to_rapidjson_val(rapidjson::Document::AllocatorType& allocator) const;
     static void from_property_tree(const boost::property_tree::ptree& node, const std::shared_ptr<monero_destination>& destination);
     std::shared_ptr<monero_destination> copy(const std::shared_ptr<monero_destination>& src, const std::shared_ptr<monero_destination>& tgt) const;
