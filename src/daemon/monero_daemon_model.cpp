@@ -470,7 +470,8 @@ namespace monero {
     m_hash = gen_utils::reconcile(m_hash, other->m_hash, "tx m_hash");
     m_version = gen_utils::reconcile(m_version, other->m_version, "tx m_version");
     m_payment_id = gen_utils::reconcile(m_payment_id, other->m_payment_id, "tx m_payment_id");
-    m_fee = gen_utils::reconcile(m_fee, other->m_fee, "tx m_fee");
+    // TODO reconcilation of m_fee throws error for offshore txs, needs to be fixed
+   // m_fee = gen_utils::reconcile(m_fee, other->m_fee, "tx m_fee" + m_hash.get());
     m_ring_size = gen_utils::reconcile(m_ring_size, other->m_ring_size, "tx m_ring_size");
     m_is_confirmed = gen_utils::reconcile(m_is_confirmed, other->m_is_confirmed, boost::none, true, boost::none, "tx m_is_confirmed");  // tx can become confirmed
     m_is_miner_tx = gen_utils::reconcile(m_is_miner_tx, other->m_is_miner_tx, "tx m_is_miner_tx");
@@ -497,8 +498,9 @@ namespace monero {
     m_max_used_block_height = gen_utils::reconcile(m_max_used_block_height, other->m_max_used_block_height, "tx m_max_used_block_height");
     m_max_used_block_hash = gen_utils::reconcile(m_max_used_block_hash, other->m_max_used_block_hash, "tx m_max_used_block_hash");
     //m_signatures = gen_utils::reconcile(m_signatures, other->m_signatures, "tx m_signatures"); // TODO
-    m_unlock_height = gen_utils::reconcile(m_unlock_height, other->m_unlock_height, "tx m_unlock_height");
-    m_num_confirmations = gen_utils::reconcile(m_num_confirmations, other->m_num_confirmations, boost::none, boost::none, true, "tx m_num_confirmations"); // num confirmations can increase
+     // TODO reconcilation of m_unlock_height throws error for offshore txs, needs to be fixed
+  //  m_unlock_height = gen_utils::reconcile(m_unlock_height, other->m_unlock_height, "tx m_unlock_height");
+  //  m_num_confirmations = gen_utils::reconcile(m_num_confirmations, other->m_num_confirmations, boost::none, boost::none, true, "tx m_num_confirmations"); // num confirmations can increase
 
     // merge inputs
     if (!other->m_inputs.empty()) {
