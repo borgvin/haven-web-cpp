@@ -250,20 +250,20 @@ namespace monero {
     // initialize destinations
     for (const auto &d: pd.m_dests) {
       std::shared_ptr<monero_destination> destination = std::make_shared<monero_destination>();
-      destination->m_currency = d.dest_asset_type;
+      destination->m_currency = pd.m_source_asset;
       destination->m_amount = d.amount;
       destination->m_address = d.address(m_w2.nettype(), pd.m_payment_id);
-     // destination->m_is_collateral = d.is_collateral;
+      destination->m_is_collateral = d.is_collateral;
       outgoing_transfer->m_destinations.push_back(destination);
     }
 
     // replace transfer amount with destination sum
     // TODO monero-project: confirmed tx from/to same account has amount 0 but cached transfer destinations
-    // if (*outgoing_transfer->m_amount == 0 && !outgoing_transfer->m_destinations.empty()) {
-    //   uint64_t amount = 0;
-    //   for (const std::shared_ptr<monero_destination>& destination : outgoing_transfer->m_destinations) amount += *destination->m_amount;
-    //   outgoing_transfer->m_amount = amount;
-    // }
+     if (!outgoing_transfer->m_destinations.empty()) {
+       uint64_t amount = 0;
+       for (const std::shared_ptr<monero_destination>& destination : outgoing_transfer->m_destinations) amount += *destination->m_is_collateral ? 0 : *destination->m_amount;
+        outgoing_transfer->m_amount = amount;
+   }
 
     // return pointer to new tx
     return tx;
@@ -354,20 +354,20 @@ namespace monero {
     // initialize destinations
     for (const auto &d: pd.m_dests) {
       std::shared_ptr<monero_destination> destination = std::make_shared<monero_destination>();
-      //destination->m_currency = d.asset_type;
+      destination->m_currency = pd.m_source_asset;
       destination->m_amount =  d.amount;
       destination->m_address = d.address(m_w2.nettype(), pd.m_payment_id);
-      //destination->m_is_collateral = d.is_collateral;
+      destination->m_is_collateral = d.is_collateral;
       outgoing_transfer->m_destinations.push_back(destination);
     }
 
     // replace transfer amount with destination sum
     // TODO monero-project: confirmed tx from/to same account has amount 0 but cached transfer destinations
-    // if (*outgoing_transfer->m_amount == 0 && !outgoing_transfer->m_destinations.empty()) {
-    //   uint64_t amount = 0;
-    //   for (const std::shared_ptr<monero_destination>& destination : outgoing_transfer->m_destinations) amount += *destination->m_amount;
-    //   outgoing_transfer->m_amount = amount;
-    // }
+    if (!outgoing_transfer->m_destinations.empty()) {
+      uint64_t amount = 0;
+      for (const std::shared_ptr<monero_destination>& destination : outgoing_transfer->m_destinations) amount += *destination->m_is_collateral ? 0 : *destination->m_amount;
+      outgoing_transfer->m_amount = amount;
+    }
 
     // return pointer to new tx
     return tx;
