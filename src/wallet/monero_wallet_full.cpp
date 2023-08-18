@@ -798,16 +798,18 @@ namespace monero {
     void on_new_block(uint64_t height, const cryptonote::block& cn_block) override {
       if (m_wallet.get_listeners().empty()) return;
 
-      // ignore notifications before sync start height, irrelevant to clients
-      if (m_sync_start_height == boost::none || height < *m_sync_start_height) return;
-
       // queue notification processing off main thread
       tools::threadpool::waiter waiter(*m_notification_pool);
       m_notification_pool->submit(&waiter, [this, height]() {
 
+        // ignore notifications before sync start height, irrelevant to clients
+        bool height_reached = (m_sync_start_height != boost::none && height >= *m_sync_start_height);
+
         // notify listeners of new block
-        for (monero_wallet_listener* listener : m_wallet.get_listeners()) {
-          listener->on_new_block(height);
+        if (height_reached) {
+          for (monero_wallet_listener* listener : m_wallet.get_listeners()) {
+            listener->on_new_block(height);
+          }
         }
 
         // notify listeners of sync progress
@@ -817,14 +819,23 @@ namespace monero {
         for (monero_wallet_listener* listener : m_wallet.get_listeners()) {
           listener->on_sync_progress(height, *m_sync_start_height, *m_sync_end_height, percent_done, message);
         }
+        int percent_done_rounded = static_cast<int>(std::round(percent_done));
+        //if (height_reached && percent_done_rounded % 5 == 0) {
+        if (percent_done_rounded % 5 == 0) {
+          // Save wallet state
+          m_wallet.save();
+        }
 
         // notify if balances change
-        check_for_changed_funds();
+        if (height_reached) {
+          check_for_changed_funds();
+        }
 
         // notify when txs unlock after wallet is synced
        // if (balances_changed && m_wallet.is_synced()) check_for_changed_unlocked_txs();
       });
     }
+
 
     void on_unconfirmed_money_received(uint64_t height, const crypto::hash &txid, const cryptonote::transaction& cn_tx, uint64_t amount, const cryptonote::subaddress_index& subaddr_index) override {
       if (m_wallet.get_listeners().empty()) return;
