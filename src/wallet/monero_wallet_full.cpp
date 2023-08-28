@@ -808,6 +808,7 @@ namespace monero {
         // notify listeners of new block
         for (monero_wallet_listener* listener : m_wallet.get_listeners()) {
           listener->on_new_block(height);
+        }
 
         // notify listeners of sync progress
         if (height >= *m_sync_end_height) m_sync_end_height = height + 1; // increase end height if necessary
@@ -817,13 +818,13 @@ namespace monero {
           listener->on_sync_progress(height, *m_sync_start_height, *m_sync_end_height, percent_done, message);
         }
 
+        // notify if balances change
         check_for_changed_funds();
 
         // notify when txs unlock after wallet is synced
        // if (balances_changed && m_wallet.is_synced()) check_for_changed_unlocked_txs();
       });
     }
-
 
     void on_unconfirmed_money_received(uint64_t height, const crypto::hash &txid, const cryptonote::transaction& cn_tx, uint64_t amount, const cryptonote::subaddress_index& subaddr_index) override {
       if (m_wallet.get_listeners().empty()) return;
