@@ -2224,7 +2224,13 @@ namespace monero {
 
 
     // adjust unlock time for offshore/onshore tx
-  if (m_w2->use_fork_rules(HF_VERSION_USE_COLLATERAL, 0)) {
+  if (m_w2->use_fork_rules(HF_VERSION_USE_COLLATERAL_V2, 0)) {
+    if (tx_type == tt::OFFSHORE || tx_type == tt::ONSHORE) {
+      locked_blocks = (m_w2->nettype() == cryptonote::TESTNET) ? HF21_SHORING_LOCK_BLOCKS_TESTNET : HF21_SHORING_LOCK_BLOCKS; // ~1 day (20 mins for testnet)
+    } else if (tx_type == tt::XUSD_TO_XASSET || tx_type == tt::XASSET_TO_XUSD) {
+      locked_blocks = (m_w2->nettype() == cryptonote::TESTNET) ? HF21_XASSET_LOCK_BLOCKS_TESTNET : HF21_XASSET_LOCK_BLOCKS; // ~48 hours (40 mins for testnet)
+    }
+  } else if (m_w2->use_fork_rules(HF_VERSION_USE_COLLATERAL, 0)) {
     if (tx_type == tt::OFFSHORE) {
       locked_blocks = (m_w2->nettype() == cryptonote::TESTNET) ? TX_OFFSHORE_UNLOCK_BLOCKS_TESTNET : TX_V6_OFFSHORE_UNLOCK_BLOCKS; // ~21 days
     } else if (tx_type == tt::ONSHORE) {
