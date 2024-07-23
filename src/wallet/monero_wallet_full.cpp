@@ -641,6 +641,13 @@ namespace monero {
     return amount;
   }
   //------------------------------------------------------------------------------------------------------------------------------
+   static uint64_t total_slippage_amount(const tools::wallet2::pending_tx &ptx)
+  {
+    uint64_t amount = 0;
+    for (const auto &dest: ptx.dests) amount += dest.slippage;
+    return amount;
+  }
+  //------------------------------------------------------------------------------------------------------------------------------
    static uint64_t total_amount(const tools::wallet2::pending_tx &ptx)
   {
     uint64_t amount = 0;
@@ -663,7 +670,7 @@ namespace monero {
   //------------------------------------------------------------------------------------------------------------------------------
   template<typename Ts, typename Tu, typename Tk>
   bool fill_response(wallet2* m_w2, std::vector<tools::wallet2::pending_tx> &ptx_vector,
-      bool get_tx_key, Ts& tx_key, Tu &amount, Tu &amount_change, Tu &amount_collateral, Tu &amount_dest, Tu &fee, Tu &weight, std::string &multisig_txset, std::string &unsigned_txset, bool do_not_relay,
+      bool get_tx_key, Ts& tx_key, Tu &amount, Tu &amount_change, Tu &amount_collateral, Tu &amount_slippage, Tu &amount_dest, Tu &fee, Tu &weight, std::string &multisig_txset, std::string &unsigned_txset, bool do_not_relay,
       Ts &tx_hash, bool get_tx_hex, Ts &tx_blob, bool get_tx_metadata, Ts &tx_metadata, Tk &spent_key_images, epee::json_rpc::error &er)
   {
     for (const auto & ptx : ptx_vector)
@@ -679,6 +686,7 @@ namespace monero {
       fill(amount, total_amount(ptx));
       fill(amount_change, total_change_amount(ptx));
       fill(amount_collateral, total_collateral_amount(ptx));
+      fill(amount_slippage, total_slippage_amount(ptx));
       fill(amount_dest, total_amount_dest(ptx));
       fill(fee, ptx.fee);
       fill(weight, cryptonote::get_transaction_weight(ptx.tx));
@@ -2299,6 +2307,7 @@ namespace monero {
     std::list<uint64_t> tx_amounts;
     std::list<uint64_t> tx_amounts_change;
     std::list<uint64_t> tx_amounts_collateral;
+    std::list<uint64_t> tx_amounts_slippage;
     std::list<uint64_t> tx_amounts_dest;
     std::list<uint64_t> tx_fees;
     std::list<uint64_t> tx_weights;
@@ -2308,7 +2317,7 @@ namespace monero {
     std::list<std::string> tx_blobs;
     std::list<std::string> tx_metadatas;
     std::list<key_image_list> input_key_images_list;
-    if (!fill_response(m_w2.get(), ptx_vector, get_tx_keys, tx_keys, tx_amounts, tx_amounts_change, tx_amounts_collateral, tx_amounts_dest, tx_fees, tx_weights, multisig_tx_hex, unsigned_tx_hex, !relay, tx_hashes, get_tx_hex, tx_blobs, get_tx_metadata, tx_metadatas, input_key_images_list, er)) {
+    if (!fill_response(m_w2.get(), ptx_vector, get_tx_keys, tx_keys, tx_amounts, tx_amounts_change, tx_amounts_collateral, tx_amounts_slippage, tx_amounts_dest, tx_fees, tx_weights, multisig_tx_hex, unsigned_tx_hex, !relay, tx_hashes, get_tx_hex, tx_blobs, get_tx_metadata, tx_metadatas, input_key_images_list, er)) {
       throw std::runtime_error("need to handle error filling response!");  // TODO
     }
 
@@ -2319,6 +2328,7 @@ namespace monero {
     auto tx_amounts_iter = tx_amounts.begin();
     auto tx_amounts_change_iter = tx_amounts_change.begin();
     auto tx_amounts_collateral_iter = tx_amounts_collateral.begin();
+    auto tx_amounts_slippage_iter = tx_amounts_slippage.begin();
     auto tx_amounts_dest_iter = tx_amounts_dest.begin();
     auto tx_fees_iter = tx_fees.begin();
     auto tx_weights_iter = tx_weights.begin();
@@ -2335,6 +2345,7 @@ namespace monero {
       tx->m_fee = *tx_fees_iter;
       tx->m_change_amount = *tx_amounts_change_iter;
       tx->m_collateral_amount = *tx_amounts_collateral_iter;
+      tx->m_slippage_amount = *tx_amounts_slippage_iter;
       tx->m_weight = *tx_weights_iter;
       tx->m_full_hex = *tx_blobs_iter;
       tx->m_metadata = *tx_metadatas_iter;
@@ -2388,6 +2399,7 @@ namespace monero {
       tx_amounts_iter++;
       tx_amounts_change_iter++;
       tx_amounts_collateral_iter++;
+      tx_amounts_slippage_iter++;
       tx_amounts_dest_iter++;
       tx_fees_iter++;
       tx_hashes_iter++;
@@ -2563,6 +2575,7 @@ namespace monero {
     std::list<uint64_t> tx_amounts;
     std::list<uint64_t> tx_amounts_change;
     std::list<uint64_t> tx_amounts_collateral;
+    std::list<uint64_t> tx_amounts_slippage;
     std::list<uint64_t> tx_amounts_dest;
     std::list<uint64_t> tx_fees;
     std::list<uint64_t> tx_weights;
@@ -2572,7 +2585,7 @@ namespace monero {
     std::list<std::string> tx_blobs;
     std::list<std::string> tx_metadatas;
     std::list<key_image_list> input_key_images_list;
-    if (!fill_response(m_w2.get(), ptx_vector, get_tx_keys, tx_keys, tx_amounts, tx_amounts_change, tx_amounts_collateral, tx_amounts_dest, tx_fees, tx_weights, multisig_tx_hex, unsigned_tx_hex, !relay, tx_hashes, get_tx_hex, tx_blobs, get_tx_metadata, tx_metadatas, input_key_images_list, err)) {
+    if (!fill_response(m_w2.get(), ptx_vector, get_tx_keys, tx_keys, tx_amounts, tx_amounts_change, tx_amounts_collateral, tx_amounts_slippage, tx_amounts_dest, tx_fees, tx_weights, multisig_tx_hex, unsigned_tx_hex, !relay, tx_hashes, get_tx_hex, tx_blobs, get_tx_metadata, tx_metadatas, input_key_images_list, err)) {
       throw std::runtime_error("need to handle error filling response!");  // TODO
     }
 
@@ -2709,6 +2722,7 @@ namespace monero {
     std::list<uint64_t> tx_amounts;
     std::list<uint64_t> tx_amounts_change;
     std::list<uint64_t> tx_amounts_collateral;
+    std::list<uint64_t> tx_amounts_slippage;
     std::list<uint64_t> tx_amounts_dest;
     std::list<uint64_t> tx_fees;
     std::list<uint64_t> tx_weights;
@@ -2718,7 +2732,7 @@ namespace monero {
     std::list<std::string> tx_blobs;
     std::list<std::string> tx_metadatas;
     std::list<key_image_list> input_key_images_list;
-    if (!fill_response(m_w2.get(), ptx_vector, get_tx_keys, tx_keys, tx_amounts, tx_amounts_change, tx_amounts_collateral,tx_amounts_dest, tx_fees, tx_weights, multisig_tx_hex, unsigned_tx_hex, !relay, tx_hashes, get_tx_hex, tx_blobs, get_tx_metadata, tx_metadatas, input_key_images_list, err)) {
+    if (!fill_response(m_w2.get(), ptx_vector, get_tx_keys, tx_keys, tx_amounts, tx_amounts_change, tx_amounts_collateral, tx_amounts_slippage, tx_amounts_dest, tx_fees, tx_weights, multisig_tx_hex, unsigned_tx_hex, !relay, tx_hashes, get_tx_hex, tx_blobs, get_tx_metadata, tx_metadatas, input_key_images_list, err)) {
       throw std::runtime_error("need to handle error filling response!");  // TODO: return err message
     }
 
@@ -2818,6 +2832,7 @@ namespace monero {
     std::list<uint64_t> tx_amounts;
     std::list<uint64_t> tx_amounts_change;
     std::list<uint64_t> tx_amounts_collateral;
+    std::list<uint64_t> tx_amounts_slippage;
     std::list<uint64_t> tx_amounts_dest;
     std::list<uint64_t> tx_fees;
     std::list<uint64_t> tx_weights;
@@ -2828,7 +2843,7 @@ namespace monero {
     std::list<std::string> tx_metadatas;
     std::list<key_image_list> input_key_images_list;
     epee::json_rpc::error er;
-    if (!fill_response(m_w2.get(), ptx_vector, get_tx_keys, tx_keys, tx_amounts, tx_amounts_change, tx_amounts_collateral,tx_amounts_dest, tx_fees, tx_weights, multisig_tx_hex, unsigned_tx_hex, !relay, tx_hashes, get_tx_hex, tx_blobs, get_tx_metadata, tx_metadatas, input_key_images_list, er)) {
+    if (!fill_response(m_w2.get(), ptx_vector, get_tx_keys, tx_keys, tx_amounts, tx_amounts_change, tx_amounts_collateral, tx_amounts_slippage, tx_amounts_dest, tx_fees, tx_weights, multisig_tx_hex, unsigned_tx_hex, !relay, tx_hashes, get_tx_hex, tx_blobs, get_tx_metadata, tx_metadatas, input_key_images_list, er)) {
       throw std::runtime_error("need to handle error filling response!");  // TODO: return err message
     }
 
