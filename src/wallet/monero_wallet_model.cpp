@@ -285,6 +285,7 @@ namespace monero {
     if (m_output_sum != boost::none) monero_utils::add_json_member("outputSum", m_output_sum.get(), allocator, root, value_num);
     if (m_change_amount != boost::none) monero_utils::add_json_member("changeAmount", m_change_amount.get(), allocator, root, value_num);
     if (m_collateral_amount != boost::none) monero_utils::add_json_member("collateralAmount", m_collateral_amount.get(), allocator, root, value_num);
+    if (m_slippage_amount != boost::none) monero_utils::add_json_member("slippageAmount", m_slippage_amount.get(), allocator, root, value_num);
     if (m_num_dummy_outputs != boost::none) monero_utils::add_json_member("numDummyOutputs", m_num_dummy_outputs.get(), allocator, root, value_num);
 
     // set string values
