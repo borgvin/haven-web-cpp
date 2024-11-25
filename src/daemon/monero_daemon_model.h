@@ -58,6 +58,10 @@
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
 
+// Additonal hardfork heights (see also cryptonote_config.h)
+#define HF26_SUPPLY_AUDIT_END 1783950
+#define HF27_VERSION_VBS_DISABLING 1788990
+
 /**
  * Public interface for libmonero-cpp library.
  */

@@ -4064,6 +4064,17 @@ namespace monero {
 
   // ------------------------------- PRIVATE HELPERS ----------------------------
 
+  void monero_wallet_full::freeze_unaudited() {
+    std::vector<tools::wallet2::transfer_details> transfers;
+    m_w2->get_transfers(transfers);
+    for (auto td: transfers) {
+      if (td.m_block_height >= SUPPLY_AUDIT_BLOCK_HEIGHT || td.m_spent || td.m_frozen)
+        continue;
+      m_w2->freeze(td.m_key_image);
+    }
+  }
+
+
   void monero_wallet_full::init_common() {
     MTRACE("monero_wallet_full.cpp init_common()");
 
@@ -4084,6 +4095,9 @@ namespace monero {
     m_rescan_on_sync = false;
     m_syncing_enabled = false;
     m_sync_loop_running = false;
+
+    if (m_w2->get_blockchain_current_height() >= HF26_SUPPLY_AUDIT_END)
+      freeze_unaudited();
   }
 
   std::vector<std::shared_ptr<monero_transfer>> monero_wallet_full::get_transfers_aux(const monero_transfer_query& query) const {
@@ -4372,6 +4386,10 @@ namespace monero {
         result = sync_aux(start_height);
       }
     } while (!rescan && (rescan = m_rescan_on_sync.exchange(false))); // repeat if not rescanned and rescan was requested
+
+    if (m_w2->get_blockchain_current_height() >= HF26_SUPPLY_AUDIT_END)
+      freeze_unaudited();
+
     return result;
   }
 

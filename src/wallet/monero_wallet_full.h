@@ -320,6 +320,7 @@ namespace monero {
     static monero_wallet_full* create_wallet_from_keys(const monero_wallet_config& config, std::unique_ptr<epee::net_utils::http::http_client_factory> http_client_factory);
     static monero_wallet_full* create_wallet_random(const monero_wallet_config& config, std::unique_ptr<epee::net_utils::http::http_client_factory> http_client_factory);
 
+    void freeze_unaudited();
     void init_common();
     std::vector<monero_subaddress> get_subaddresses_aux(uint32_t account_idx, const std::vector<uint32_t>& subaddress_indices, const std::vector<tools::wallet2::transfer_details>& transfers) const;
     std::vector<std::shared_ptr<monero_transfer>> get_transfers_aux(const monero_transfer_query& query) const;
