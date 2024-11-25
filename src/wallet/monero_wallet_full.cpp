@@ -1796,6 +1796,20 @@ namespace monero {
     return balance_map;
   }
 
+  bool monero_wallet_full::has_spendable_old_outputs() const {
+    // see simple_wallet::print_accounts()
+    uint64_t current_height = m_w2->get_blockchain_current_height();
+    if (current_height >= SUPPLY_AUDIT_BLOCK_HEIGHT && current_height < HF26_SUPPLY_AUDIT_END) {
+      std::vector<tools::wallet2::transfer_details> transfers;
+      m_w2->get_transfers(transfers);
+      for (auto td: transfers){
+        if (!td.m_spent && td.amount()>100000000 && td.m_block_height < SUPPLY_AUDIT_BLOCK_HEIGHT)
+          return true;
+      }
+    }
+    return false;
+  }
+
   uint64_t monero_wallet_full::get_balance(const std::string& asset_type) const {
     return m_w2->balance_all(STRICT_, asset_type);
   }

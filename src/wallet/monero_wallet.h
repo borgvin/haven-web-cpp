@@ -569,6 +569,16 @@ namespace monero {
     }
 
     /**
+     * Get the wallet's unaudited balances.
+     *
+     * @return true if the wallet has spendable unaudited balances, else false
+     */
+
+    virtual bool has_spendable_old_outputs() const {
+      throw std::runtime_error("has_spendable_old_outputs() not supported");
+    }
+
+    /**
      * Get balance of one asset.
      *
      * @param account_idx is the index of the account to get the balance of
