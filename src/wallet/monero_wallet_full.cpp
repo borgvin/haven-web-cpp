@@ -1780,6 +1780,22 @@ namespace monero {
     return balance_map;
   };
 
+  std::map<std::string, uint64_t> monero_wallet_full::get_unaudited_balance(bool unlocked_only) const {
+    std::map<std::string, uint64_t> balance_map;
+    for (auto asset : offshore::ASSET_TYPES)
+      balance_map[asset] = 0;
+    std::vector<tools::wallet2::transfer_details> transfers;
+    m_w2->get_transfers(transfers);
+    for (auto td: transfers) {
+      if (td.m_block_height >= SUPPLY_AUDIT_BLOCK_HEIGHT || td.m_spent)
+        continue;
+      if (unlocked_only && !m_w2->is_transfer_unlocked(td))
+        continue;
+      balance_map[td.asset_type] += td.amount();
+    }
+    return balance_map;
+  }
+
   uint64_t monero_wallet_full::get_balance(const std::string& asset_type) const {
     return m_w2->balance_all(STRICT_, asset_type);
   }

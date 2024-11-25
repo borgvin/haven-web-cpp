@@ -559,6 +559,16 @@ namespace monero {
     }
 
     /**
+     * Get the wallet's unaudited balances.
+     *
+     * @return the wallet's unaudited balances
+     */
+
+    virtual std::map<std::string, uint64_t> get_unaudited_balance(bool unlocked_only) const {
+      throw std::runtime_error("get_unaudited_balance() not supported");
+    }
+
+    /**
      * Get balance of one asset.
      *
      * @param account_idx is the index of the account to get the balance of

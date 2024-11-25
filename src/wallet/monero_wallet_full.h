@@ -226,6 +226,7 @@ namespace monero {
     uint64_t get_collateral_requirements(const std::string& source_asset_type, const std::string& destination_asset_type, uint64_t amount) const override;
     uint64_t get_max_destination_amount(const std::string& source_asset_type, const std::string& destination_asset_type) const override;
     std::map<std::string, uint64_t> get_balance() const override;
+    std::map<std::string, uint64_t> get_unaudited_balance(bool unlocked_only) const override;
     uint64_t get_balance(const std::string& asset_type) const override;
     uint64_t get_balance(const std::string& asset_type, uint32_t account_idx) const override;
     uint64_t get_balance(const std::string& asset_type, uint32_t account_idx, uint32_t subaddress_idx) const override;
