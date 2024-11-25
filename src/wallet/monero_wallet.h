@@ -94,8 +94,10 @@ namespace monero {
      *
      * @param new_balance - new balance
      * @param new_unlocked_balance - new unlocked balance
+     * @param new_unaudited_balance - new unaudited balance
+     * @param new_unlocked_unaudited_balance - new unlocked unaudited balance
      */
-    virtual void on_balances_changed(uint64_t new_balance, uint64_t new_unlocked_balance, const std::string& asset_type) {};
+    virtual void on_balances_changed(uint64_t new_balance, uint64_t new_unlocked_balance, uint64_t new_unaudited_balance, uint64_t new_unlocked_unaudited_balance, const std::string& asset_type) {};
 
     /**
      * Invoked when the wallet receives an output.

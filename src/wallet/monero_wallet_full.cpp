@@ -987,32 +987,39 @@ namespace monero {
     boost::mutex m_listener_mutex;
     std::map<std::string, uint64_t> m_prev_balance;
     std::map<std::string, uint64_t> m_prev_unlocked_balance;
+    std::map<std::string, uint64_t> m_prev_unaudited_balance;
+    std::map<std::string, uint64_t> m_prev_unlocked_unaudited_balance;
     std::set<std::string> m_prev_locked_tx_hashes;
     std::unique_ptr<tools::threadpool> m_notification_pool;  // threadpool of size 1 to queue notifications for external announcement
 
     void check_for_changed_funds(boost::optional<std::string> asset_type = boost::none) {
       if (m_wallet.get_listeners().empty()) return; // skip if no listeners
 
+      std::map<std::string, uint64_t> m_current_balance = m_wallet.get_balance();
+      std::map<std::string, uint64_t> m_current_unlocked_balance = m_wallet.get_unlocked_balance();
+      std::map<std::string, uint64_t> m_current_unaudited_balance = m_wallet.get_unaudited_balance(false);
+      std::map<std::string, uint64_t> m_current_unlocked_unaudited_balance = m_wallet.get_unaudited_balance(true);
 
-    std::map<std::string, uint64_t> m_current_balance = m_wallet.get_balance();
-    std::map<std::string, uint64_t> m_current_unlocked_balance = m_wallet.get_unlocked_balance();
-    bool balance_changed = false;
+      bool balance_changed = false;
 
-    if (asset_type != boost::none) {
+      if (asset_type != boost::none) {
+        auto iter1 = m_prev_balance.find(asset_type.get());
+        auto iter2 = m_current_balance.find(asset_type.get());
 
-      auto iter1 = m_prev_balance.find(asset_type.get());
-      auto iter2 = m_current_balance.find(asset_type.get());
+        auto iter3 = m_prev_unlocked_balance.find(asset_type.get());
+        auto iter4 = m_current_unlocked_balance.find(asset_type.get());
 
-      auto iter3 = m_prev_unlocked_balance.find(asset_type.get());
-      auto iter4 = m_current_unlocked_balance.find(asset_type.get());
+        auto iter5 = m_prev_unaudited_balance.find(asset_type.get());
+        auto iter6 = m_current_unaudited_balance.find(asset_type.get());
 
-      if (iter1->second != iter2->second || iter3->second != iter4->second) {
+        auto iter7 = m_prev_unlocked_unaudited_balance.find(asset_type.get());
+        auto iter8 = m_current_unlocked_unaudited_balance.find(asset_type.get());
 
-        on_balances_changed(iter2->second, iter4->second, asset_type.get());
-        balance_changed = true;
-      }
+        if (iter1->second != iter2->second || iter3->second != iter4->second || iter5->second != iter6->second || iter7->second != iter8->second) {
+          on_balances_changed(iter2->second, iter4->second, iter6->second, iter8->second, asset_type.get());
+          balance_changed = true;
+        }
       } else {
-
         for (const auto &asset_type_in_list : offshore::ASSET_TYPES) {
 
           auto iter1 = m_prev_balance.find(asset_type_in_list);
@@ -1021,19 +1028,25 @@ namespace monero {
           auto iter3 = m_prev_unlocked_balance.find(asset_type_in_list);
           auto iter4 = m_current_unlocked_balance.find(asset_type_in_list);
 
-          if (iter1->second != iter2->second || iter3->second != iter4->second) {
+          auto iter5 = m_prev_unaudited_balance.find(asset_type_in_list);
+          auto iter6 = m_current_unaudited_balance.find(asset_type_in_list);
 
-            on_balances_changed(iter2->second, iter4->second, asset_type_in_list);
+          auto iter7 = m_prev_unlocked_unaudited_balance.find(asset_type_in_list);
+          auto iter8 = m_current_unlocked_unaudited_balance.find(asset_type_in_list);
+
+          if (iter1->second != iter2->second || iter3->second != iter4->second || iter5->second != iter6->second || iter7->second != iter8->second) {
+            on_balances_changed(iter2->second, iter4->second, iter6->second, iter8->second, asset_type_in_list);
             balance_changed = true;
           }
         }
-
       }
 
-        if (balance_changed) {
-          m_prev_balance = m_wallet.get_balance();
-          m_prev_unlocked_balance = m_wallet.get_unlocked_balance();
-        }
+      if (balance_changed) {
+        m_prev_balance = m_current_balance;
+        m_prev_unlocked_balance = m_current_unlocked_balance;
+        m_prev_unaudited_balance = m_current_unaudited_balance;
+        m_prev_unlocked_unaudited_balance = m_current_unlocked_unaudited_balance;
+      }
 
   /*     if (m_prev_balance != m_wallet.get_balance() || m_prev_unlocked_balance != m_wallet.get_unlocked_balance()) {
         on_balances_changed(m_wallet.get_balance(), m_wallet.get_unlocked_balance());
@@ -1043,10 +1056,10 @@ namespace monero {
       if (m_wallet.is_synced()) check_for_changed_unlocked_txs(); // check for newly unlocked outputs if synced
     }
 
-    void on_balances_changed(uint64_t new_balance, uint64_t new_unlocked_balance, const std::string& asset_type ) {
+    void on_balances_changed(uint64_t new_balance, uint64_t new_unlocked_balance, uint64_t new_unaudited_balance, uint64_t new_unlocked_unaudited_balance, const std::string& asset_type ) {
       if (m_wallet.get_listeners().empty()) return;
       for (monero_wallet_listener* listener : m_wallet.get_listeners()) {
-        listener->on_balances_changed(new_balance, new_unlocked_balance, asset_type);
+        listener->on_balances_changed(new_balance, new_unlocked_balance, new_unaudited_balance, new_unlocked_unaudited_balance, asset_type);
       }
       return;
     }
