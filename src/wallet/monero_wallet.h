@@ -912,6 +912,19 @@ namespace monero {
     }
 
     /**
+     * Create one or more transactions to audit funds in this wallet.
+     *
+     * @param address the address to send to, does not apply if keep_subaddress is true
+     * @param keep_subaddress return funds to their original accounts/subaddresses
+     * @param priority tx priority, may be adjusted automatically
+     * @param relay broadcast txs if true
+     * @return the created transactions
+     */
+    virtual std::vector<std::shared_ptr<monero_tx_wallet>> create_txs_audit(std::string address, bool keep_subaddress, uint32_t priority, bool relay)  {
+      throw std::runtime_error("create_txs_audit() not supported");
+    }
+
+    /**
      * Sweep unlocked funds according to the given config.
      *
      * @param config is the sweep configuration

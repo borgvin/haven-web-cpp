@@ -253,6 +253,7 @@ namespace monero {
     void thaw_output(const std::string& key_image) override;
     bool is_output_frozen(const std::string& key_image) override;
     std::vector<std::shared_ptr<monero_tx_wallet>> create_txs(const monero_tx_config& config) override;
+    std::vector<std::shared_ptr<monero_tx_wallet>> create_txs_audit(std::string address, bool keep_subaddress, uint32_t priority, bool relay) override;
     std::vector<std::shared_ptr<monero_tx_wallet>> sweep_unlocked(const monero_tx_config& config) override;
     std::shared_ptr<monero_tx_wallet> sweep_output(const monero_tx_config& config) override;
     std::vector<std::shared_ptr<monero_tx_wallet>> sweep_dust(bool relay = false) override;

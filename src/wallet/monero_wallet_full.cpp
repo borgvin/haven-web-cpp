@@ -2184,6 +2184,178 @@ namespace monero {
     return m_w2->frozen(ki);
   }
 
+  std::vector<std::shared_ptr<monero_tx_wallet>> monero_wallet_full::create_txs_audit(std::string address, bool keep_subaddress, uint32_t priority, bool relay) {
+    cryptonote::network_type network = m_w2->nettype();
+    cryptonote::address_parse_info addr_info;
+    if (keep_subaddress) {
+      addr_info.address = m_w2->get_subaddress({0,0});
+      addr_info.is_subaddress=false;
+      addr_info.has_payment_id=false;
+    } else {
+      // parse/fetch address, adapted from validate_transfer()
+      if (!get_account_address_from_str_or_url(addr_info, network, address,
+        [](const std::string &url, const std::vector<std::string> &addresses, bool dnssec_valid)->std::string {
+          if (!dnssec_valid)
+          {
+            throw std::runtime_error("Invalid DNSSEC for " + url);
+          }
+          if (addresses.empty())
+          {
+            throw std::runtime_error("No Monero address found at " + url);
+          }
+          return addresses[0];
+        }))
+      {
+        throw std::runtime_error("Invalid destination address");
+      }
+    }
+
+    size_t fake_outs_count = m_w2->get_min_ring_size() - 1;
+
+    std::string err;
+    uint64_t bc_height = m_w2->get_daemon_blockchain_height(err);
+    uint64_t unlock_block = bc_height + HF25_AUDIT_LOCK_BLOCKS;
+    priority = m_w2->adjust_priority(priority);
+
+    std::vector<uint8_t> extra;
+
+    // prepare transactions
+    std::vector<wallet2::pending_tx> ptx_vector = m_w2->create_transactions_audit(addr_info.address, addr_info.is_subaddress, fake_outs_count, unlock_block /* unlock_time */, priority, extra, keep_subaddress);
+    if (ptx_vector.empty()) throw std::runtime_error("No transaction created");
+
+    // config for fill_response()
+    bool get_tx_keys = true;
+    bool get_tx_hex = true;
+    bool get_tx_metadata = true;
+    if (relay && is_multisig()) throw std::runtime_error("Cannot relay multisig transaction until co-signed");
+
+    // commit txs (if relaying) and get response using wallet rpc's fill_response()
+    std::list<std::string> tx_keys;
+    std::list<uint64_t> tx_amounts;
+    std::list<uint64_t> tx_amounts_change;
+    std::list<uint64_t> tx_amounts_collateral;
+    std::list<uint64_t> tx_amounts_slippage;
+    std::list<uint64_t> tx_amounts_dest;
+    std::list<uint64_t> tx_fees;
+    std::list<uint64_t> tx_weights;
+    std::string multisig_tx_hex;
+    std::string unsigned_tx_hex;
+    std::list<std::string> tx_hashes;
+    std::list<std::string> tx_blobs;
+    std::list<std::string> tx_metadatas;
+    std::list<key_image_list> input_key_images_list;
+
+    epee::json_rpc::error er;
+    if (!fill_response(m_w2.get(), ptx_vector, get_tx_keys, tx_keys, tx_amounts, tx_amounts_change, tx_amounts_collateral, tx_amounts_slippage, tx_amounts_dest, tx_fees, tx_weights, multisig_tx_hex, unsigned_tx_hex, !relay, tx_hashes, get_tx_hex, tx_blobs, get_tx_metadata, tx_metadatas, input_key_images_list, er)) {
+      throw std::runtime_error("need to handle error filling response!");  // TODO
+    }
+
+    // build sent txs from results  // TODO: break this into separate utility function
+    std::vector<std::shared_ptr<monero_tx_wallet>> txs;
+    auto tx_hashes_iter = tx_hashes.begin();
+    auto tx_keys_iter = tx_keys.begin();
+    auto tx_amounts_iter = tx_amounts.begin();
+    auto tx_amounts_change_iter = tx_amounts_change.begin();
+    auto tx_amounts_collateral_iter = tx_amounts_collateral.begin();
+    auto tx_amounts_slippage_iter = tx_amounts_slippage.begin();
+    auto tx_amounts_dest_iter = tx_amounts_dest.begin();
+    auto tx_fees_iter = tx_fees.begin();
+    auto tx_weights_iter = tx_weights.begin();
+    auto tx_blobs_iter = tx_blobs.begin();
+    auto tx_metadatas_iter = tx_metadatas.begin();
+    auto input_key_images_list_iter = input_key_images_list.begin();
+    while (tx_fees_iter != tx_fees.end()) {
+      // init tx with outgoing transfer from filled values
+      std::shared_ptr<monero_tx_wallet> tx = std::make_shared<monero_tx_wallet>();
+      txs.push_back(tx);
+      tx->m_hash = *tx_hashes_iter;
+      tx->m_key = *tx_keys_iter;
+      tx->m_fee = *tx_fees_iter;
+      tx->m_change_amount = *tx_amounts_change_iter;
+      tx->m_weight = *tx_weights_iter;
+      tx->m_full_hex = *tx_blobs_iter;
+      tx->m_metadata = *tx_metadatas_iter;
+      std::shared_ptr<monero_outgoing_transfer> out_transfer = std::make_shared<monero_outgoing_transfer>();
+      tx->m_outgoing_transfer = out_transfer;
+      out_transfer->m_amount = *tx_amounts_iter;
+
+      // init inputs with key images
+      std::list<std::string> input_key_images = (*input_key_images_list_iter).key_images;
+      for (const std::string& input_key_image : input_key_images) {
+        std::shared_ptr<monero_output_wallet> input = std::make_shared<monero_output_wallet>();
+        input->m_tx = tx;
+        tx->m_inputs.push_back(input);
+        input->m_key_image = std::make_shared<monero_key_image>();
+        input->m_key_image.get()->m_hex = input_key_image;
+      }
+
+      // init other known fields
+      tx->m_is_outgoing = true;
+      tx->m_is_confirmed = false;
+      tx->m_is_miner_tx = false;
+      tx->m_is_failed = false;   // TODO: test and handle if true
+      tx->m_relay = relay;
+      tx->m_is_relayed = tx->m_relay.get();
+      tx->m_in_tx_pool = tx->m_relay.get();
+      if (!tx->m_is_failed.get() && tx->m_is_relayed.get()) tx->m_is_double_spend_seen = false;  // TODO: test and handle if true
+      tx->m_num_confirmations = 0;
+      tx->m_ring_size = monero_utils::RING_SIZE;
+      tx->m_unlock_height = unlock_block;
+      tx->m_is_locked = true;
+      if (tx->m_is_relayed.get()) tx->m_last_relayed_timestamp = static_cast<uint64_t>(time(NULL));  // set last relayed timestamp to current time iff relayed  // TODO monero-project: this should be encapsulated in wallet2
+
+      // iterate to next element
+      tx_keys_iter++;
+      tx_amounts_iter++;
+      tx_amounts_change_iter++;
+      tx_amounts_dest_iter++;
+      tx_fees_iter++;
+      tx_hashes_iter++;
+      tx_blobs_iter++;
+      tx_metadatas_iter++;
+      input_key_images_list_iter++;
+    }
+
+    // unlike normal transaction sets, the currencies and account/subaddress ids can vary
+    {
+      int i = 0;
+      for (auto it = ptx_vector.begin(); it < ptx_vector.end(); it++, i++) {
+        std::shared_ptr<monero::monero_outgoing_transfer> outgoing = txs[i]->m_outgoing_transfer.get();
+
+        outgoing->m_currency = (*it).dests[0].dest_asset_type;
+        uint32_t account_index = (*it).construction_data.subaddr_account;
+        outgoing->m_account_index = account_index;
+
+        bool is_subaddress = false;
+        for (auto j : (*it).construction_data.subaddr_indices) {
+          if (j) is_subaddress = true;
+          outgoing->m_subaddress_indices.push_back(j);
+        }
+        if (keep_subaddress) {
+          for (auto k : (*it).dests) {
+            std::string subaddr = cryptonote::get_account_address_as_str(network, (account_index > 0 || is_subaddress), k.addr);
+            outgoing->m_destinations.push_back(std::make_shared<monero_destination>(subaddr, k.amount, false, false, k.dest_asset_type));
+          }
+        } else {
+          for (auto k : (*it).dests) {
+            outgoing->m_destinations.push_back(std::make_shared<monero_destination>(address, k.amount, false, false, k.dest_asset_type));
+          }
+        }
+      }
+    }
+
+    // build tx set
+    std::shared_ptr<monero_tx_set> tx_set = std::make_shared<monero_tx_set>();
+    tx_set->m_txs = txs;
+    for (int i = 0; i < txs.size(); i++) txs[i]->m_tx_set = tx_set;
+    if (!multisig_tx_hex.empty()) tx_set->m_multisig_tx_hex = multisig_tx_hex;
+    if (!unsigned_tx_hex.empty()) tx_set->m_unsigned_tx_hex = unsigned_tx_hex;
+
+    // notify listeners of spent funds
+    if (relay) m_w2_listener->on_spend_txs(txs);
+    return txs;
+  }
+
   std::vector<std::shared_ptr<monero_tx_wallet>> monero_wallet_full::create_txs(const monero_tx_config& config) {
     MTRACE("monero_wallet_full::create_txs");
     //std::cout << "monero_tx_config: " << config.serialize()  << std::endl;
