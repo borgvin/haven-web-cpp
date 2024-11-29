@@ -226,6 +226,8 @@ namespace monero {
     uint64_t get_collateral_requirements(const std::string& source_asset_type, const std::string& destination_asset_type, uint64_t amount) const override;
     uint64_t get_max_destination_amount(const std::string& source_asset_type, const std::string& destination_asset_type) const override;
     std::map<std::string, uint64_t> get_balance() const override;
+    std::map<std::string, uint64_t> get_unaudited_balance(bool unlocked_only) const override;
+    bool has_spendable_old_outputs() const override;
     uint64_t get_balance(const std::string& asset_type) const override;
     uint64_t get_balance(const std::string& asset_type, uint32_t account_idx) const override;
     uint64_t get_balance(const std::string& asset_type, uint32_t account_idx, uint32_t subaddress_idx) const override;
@@ -253,6 +255,7 @@ namespace monero {
     void thaw_output(const std::string& key_image) override;
     bool is_output_frozen(const std::string& key_image) override;
     std::vector<std::shared_ptr<monero_tx_wallet>> create_txs(const monero_tx_config& config) override;
+    std::vector<std::shared_ptr<monero_tx_wallet>> create_txs_audit(std::string address, bool keep_subaddress, uint32_t priority, bool relay) override;
     std::vector<std::shared_ptr<monero_tx_wallet>> sweep_unlocked(const monero_tx_config& config) override;
     std::shared_ptr<monero_tx_wallet> sweep_output(const monero_tx_config& config) override;
     std::vector<std::shared_ptr<monero_tx_wallet>> sweep_dust(bool relay = false) override;
@@ -318,6 +321,7 @@ namespace monero {
     static monero_wallet_full* create_wallet_from_keys(const monero_wallet_config& config, std::unique_ptr<epee::net_utils::http::http_client_factory> http_client_factory);
     static monero_wallet_full* create_wallet_random(const monero_wallet_config& config, std::unique_ptr<epee::net_utils::http::http_client_factory> http_client_factory);
 
+    void freeze_unaudited();
     void init_common();
     std::vector<monero_subaddress> get_subaddresses_aux(uint32_t account_idx, const std::vector<uint32_t>& subaddress_indices, const std::vector<tools::wallet2::transfer_details>& transfers) const;
     std::vector<std::shared_ptr<monero_transfer>> get_transfers_aux(const monero_transfer_query& query) const;

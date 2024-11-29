@@ -94,8 +94,10 @@ namespace monero {
      *
      * @param new_balance - new balance
      * @param new_unlocked_balance - new unlocked balance
+     * @param new_unaudited_balance - new unaudited balance
+     * @param new_unlocked_unaudited_balance - new unlocked unaudited balance
      */
-    virtual void on_balances_changed(uint64_t new_balance, uint64_t new_unlocked_balance, const std::string& asset_type) {};
+    virtual void on_balances_changed(uint64_t new_balance, uint64_t new_unlocked_balance, uint64_t new_unaudited_balance, uint64_t new_unlocked_unaudited_balance, const std::string& asset_type) {};
 
     /**
      * Invoked when the wallet receives an output.
@@ -559,6 +561,26 @@ namespace monero {
     }
 
     /**
+     * Get the wallet's unaudited balances.
+     *
+     * @return the wallet's unaudited balances
+     */
+
+    virtual std::map<std::string, uint64_t> get_unaudited_balance(bool unlocked_only) const {
+      throw std::runtime_error("get_unaudited_balance() not supported");
+    }
+
+    /**
+     * Get the wallet's unaudited balances.
+     *
+     * @return true if the wallet has spendable unaudited balances, else false
+     */
+
+    virtual bool has_spendable_old_outputs() const {
+      throw std::runtime_error("has_spendable_old_outputs() not supported");
+    }
+
+    /**
      * Get balance of one asset.
      *
      * @param account_idx is the index of the account to get the balance of
@@ -909,6 +931,19 @@ namespace monero {
      */
     virtual std::vector<std::shared_ptr<monero_tx_wallet>> create_txs(const monero_tx_config& config) {
       throw std::runtime_error("create_txs() not supported");
+    }
+
+    /**
+     * Create one or more transactions to audit funds in this wallet.
+     *
+     * @param address the address to send to, does not apply if keep_subaddress is true
+     * @param keep_subaddress return funds to their original accounts/subaddresses
+     * @param priority tx priority, may be adjusted automatically
+     * @param relay broadcast txs if true
+     * @return the created transactions
+     */
+    virtual std::vector<std::shared_ptr<monero_tx_wallet>> create_txs_audit(std::string address, bool keep_subaddress, uint32_t priority, bool relay)  {
+      throw std::runtime_error("create_txs_audit() not supported");
     }
 
     /**
