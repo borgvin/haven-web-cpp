@@ -4122,9 +4122,6 @@ namespace monero {
     m_rescan_on_sync = false;
     m_syncing_enabled = false;
     m_sync_loop_running = false;
-
-    if (m_w2->get_blockchain_current_height() >= HF26_SUPPLY_AUDIT_END)
-      freeze_unaudited();
   }
 
   std::vector<std::shared_ptr<monero_transfer>> monero_wallet_full::get_transfers_aux(const monero_transfer_query& query) const {
@@ -4414,9 +4411,6 @@ namespace monero {
       }
     } while (!rescan && (rescan = m_rescan_on_sync.exchange(false))); // repeat if not rescanned and rescan was requested
 
-    if (m_w2->get_blockchain_current_height() >= HF26_SUPPLY_AUDIT_END)
-      freeze_unaudited();
-
     return result;
   }
 
@@ -4435,6 +4429,13 @@ namespace monero {
     try {
       m_w2->refresh(m_w2->is_trusted_daemon(), sync_start_height, result.m_num_blocks_fetched, result.m_received_money, true);
       if (!m_is_synced) m_is_synced = true;
+
+      uint64_t new_height = sync_start_height + result.m_num_blocks_fetched;
+
+      if (sync_start_height < HF26_SUPPLY_AUDIT_END && new_height >= HF26_SUPPLY_AUDIT_END) {
+        freeze_unaudited();
+      }
+
       m_w2_listener->update_listening();  // cannot unregister during sync which would segfault
     } catch (std::exception& e) {
       m_w2_listener->on_sync_end(); // signal end of sync to reset listener's start and end heights
